@@ -1,22 +1,27 @@
 /*
 */
 
-#include <cstdio>
-#include <cstring>
-#include <cerrno>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <netinet/in.h>
 
 #define PORT 1494
+
+void msgProcess(){
+}
+
+enum MSG{
+    PING,
+    CONNECT,
+    REQUEST,
+    
+};
 
 int main()
 {
     int sd;
     sockaddr_in server = {};
-    char buffer[100];
     
-    if ( (sd=socket(AF_INET, SOCK_DGRAM, 0)) == -1){
+    if ( (sd=socket(AF_INET, SOCK_DGRAM, 0) == -1){
         perror("Nu a putut fi creat socket-ul");
         return errno;
     }
@@ -24,7 +29,7 @@ int main()
     
     server.sin_family = AF_INET;
     server.sin_port = htons(PORT);
-    server.sin_addr.s_addr = htonl(INADDR_ANY);
+    server.sin_addr = htonl(INADDR_ANY);
     if (bind(sd, (sockaddr*)&server, sizeof(sockaddr))==-1){
         perror("Eroare la bind().\n");
         return errno;
@@ -32,14 +37,12 @@ int main()
 
     bool quit = 0;
     while (!quit){
-        sockaddr_in client = {};
-        int msgLen;
-        socklen_t addrLen = sizeof(sockaddr);
-
-
-        msgLen = recvfrom(sd, buffer, sizeof(buffer), 0, (sockaddr*)&client, &addrLen);
-        strcpy(buffer, "Buna buna");
-        msgLen = sendto(sd, buffer, strlen(buffer), 0, (sockaddr*)&client, addrLen);
+        int len, sockSize;
+        char msg[100];
+        if ( (len=recvfrom(sd, msg, 100, 0, (sockaddr *)&client, &sockSize)<=0 ){
+            perror("Eroare la primire");
+        }
+        printf("%s", msg);
     }
 
     return 0;
