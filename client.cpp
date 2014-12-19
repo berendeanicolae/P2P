@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <cerrno>
+#include <cstring>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -18,6 +19,7 @@ int main()
 {
     int sd;
     sockaddr_in server;
+	bool quit = 0;
     
     if ( (sd=socket(AF_INET, SOCK_DGRAM, 0)) == -1){
         perror("Eroare la socket()");
@@ -27,7 +29,13 @@ int main()
     server.sin_addr.s_addr = inet_addr("255.255.255.255");
     server.sin_port = htons(sPort);
     
-    sendto(sd, "text", 5, 0, (sockaddr*)&server, sizeof(server));
+	while (!quit){
+		char msg[100];
+		scanf("%s", msg);
+		if (!strcmp(msg, "close"))
+			quit = 1;
+	    sendto(sd, "text", 5, 0, (sockaddr*)&server, sizeof(server));
+	}
     close(sd);
     
     return 0;
