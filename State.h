@@ -7,7 +7,7 @@
 using namespace std;
 
 enum action{
-    P2P_connect
+    P2P_connectAsPeer
 };
 
 class State{

@@ -16,19 +16,26 @@ string intToString(int value){
     return str;
 }
 
-Application::Application(){
+Application::Application(): quit(0), state(0){
+    //create socket
 	if ( (sd=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
 		perror("Eroare la creare socket");
 	}
     
-    string ipPort;
-    ipPort += IP;
-    ipPort += intToString(PORT);
-    commands.push_back(make_pair(P2P_connect, ipPort));
-    
+    //initialize server address
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr(IP);
     server.sin_port = htons(PORT);
+    
+    //initial connect request
+    connected = 0;
+    connectTimeout = 3;
+    string ipPort = string(IP)+" "+intToString(PORT);
+    requests.push_back(make_pair(P2P_connectAsPeer, ipPort));
+    
+    //process initial connect request
+    state = new Client();
+    process();
 }
 
 Application::~Application(){
@@ -36,10 +43,31 @@ Application::~Application(){
 }
 
 void Application::process(){
-    for (unsigned i=0; i<commands.size(); ++i){
+    for (unsigned i=0; i<requests.size(); ++i){
+        switch (requests[i].first){
+            case P2P_connectAsPeer:
+                break;
+        }
+    }
+    requests.clear();
+    
+    if (!connected){
+        if (connectTimeout){
+            --connectTimeout;
+            return;
+        }
+        
+        //Nu exista server in retea
+        quit = 1;
+        printf("success");
+        
     }
 }
 
 void Application::run(){
-    state->listen(commands);
+    while (!quit){
+        if (state)
+            state->listen(requests);
+        process();
+    }
 }
