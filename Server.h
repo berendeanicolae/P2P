@@ -1,13 +1,13 @@
-#ifndef CLIENT_H_INCLUDED
-#define CLIENT_H_INCLUDED
+#ifndef SERVER_H_INCLUDED
+#define SERVER_H_INCLUDED
 
 #include "State.h"
 
-class Client : public State{
+class Server : public State{
     public:
         int listen(vector< pair<action, string> > &commands, int timeOut);
     private:
         int sd, nfds;
 };
 
-#endif
+#endif //SERVER_H_INCLUDED

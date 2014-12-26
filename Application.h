@@ -4,6 +4,7 @@
 #include "network.h"
 #include "State.h"
 #include "Client.h"
+#include "Server.h"
 #include <vector>
 #include <string>
 using namespace std;
@@ -29,9 +30,9 @@ class Application{
     private:
         State *state;
         vector< pair<action, string> > requests;
-        
+
         void process();
-        
+
 };
 
 #endif

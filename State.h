@@ -7,14 +7,16 @@
 using namespace std;
 
 enum action{
-    P2P_connectAsPeer
+    P2P_connectAsPeer,
+    P2P_connectAsServer,
+    P2P_connectedOK
 };
 
 class State{
     public:
         State();
         virtual ~State();
-        virtual int listen(vector< pair<action, string> > &commands, int timeOut=60)=0;
+        virtual int listen(vector< pair<action, string> > &commands, int timeOut=100)=0;
 };
 
 
