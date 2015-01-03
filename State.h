@@ -3,13 +3,16 @@
 
 #include <vector>
 #include <string>
-#include <sys/time.h>
+#include "network.h"
 using namespace std;
 
 enum action{
     P2P_connectAsPeer,
     P2P_connectAsServer,
-    P2P_connectedOK
+    P2P_connectedOK,
+    P2P_quit,
+    P2P_ping,
+    P2P_pong
 };
 
 class State{

@@ -1,7 +1,9 @@
 #include "Application.h"
 #include <algorithm>
+#include <cstring>
 #define PORT 39085
-#define IP "85.122.23.145"
+//#define IP "85.122.23.145"
+#define IP "127.0.0.1"
 
 string intToString(int value){
     string str;
@@ -34,7 +36,7 @@ Application::Application(): quit(0), state(0){
     requests.push_back(make_pair(P2P_connectAsPeer, ipPort));
 
     //process initial connect request
-    state = new Client();
+    state = new Client(sd);
     process();
 }
 
@@ -46,13 +48,26 @@ Application::~Application(){
 }
 
 void Application::process(){
+    socklen_t sock_size = sizeof(server);
+    char msg[100]={};
+
     for (unsigned i=0; i<requests.size(); ++i){
-        switch (requests[i].first){
+        action type=requests[i].first;
+        memset(msg, 0, sizeof(msg));
+
+        switch (type){
             case P2P_connectAsPeer:
-                break;
             case P2P_connectAsServer:
+                memcpy(msg, &type, sizeof(type));
+                memcpy(msg+sizeof(type), requests[i].second.c_str(), requests[i].second.size());
+                sendto(sd, msg, sizeof(msg), 0, (sockaddr*)&server, sock_size);
                 break;
             case P2P_connectedOK:
+                connected = 1;
+                printf("[app] Aplicatia s-a conectat cu succes\n");
+                break;
+            case P2P_quit:
+                quit = 1;
                 break;
             default:
                 //wrong code
@@ -60,7 +75,9 @@ void Application::process(){
         }
     }
     requests.clear();
+}
 
+void Application::checkIfConnected(){
     if (!connected){
         if (connectTimeout>0){
             --connectTimeout;
@@ -73,6 +90,12 @@ void Application::process(){
             // optiunea de reutilizare a adresei pentru socket
             int opt;
 
+            close(sd); //creem un nou socket si il atasam adresei dorite
+            if ( (sd=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
+                perror("Eroare la creare socket");
+            }
+
+            memset(&server, 0, sizeof(server));
             server.sin_family = AF_INET;
             server.sin_addr.s_addr = htonl(INADDR_ANY);
             server.sin_port = htons (PORT);
@@ -81,13 +104,16 @@ void Application::process(){
             // setez optiunea de a reutiliza portul
             setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
             // atasez socketul
-            if (bind(sd, (sockaddr*)&server, sizeof(server))==-1){
+            if (bind(sd, (sockaddr*)&server, sizeof(sockaddr))==-1){
                 perror("[server]Eroare la bind()");
                 quit = 1;
+                return;
             }
             // schimb state din client in server
             delete state;
-            state = new Server;
+            state = new Server(sd);
+            connected = 1;
+            printf("Nu a fost gasit server de bootstrap.\n");
         }
     }
 }
@@ -97,5 +123,12 @@ void Application::run(){
         if (state)
             state->listen(requests);
         process();
+        checkIfConnected();
+        static int startTime=getTicks();
+        static int x =-1;
+        if (getTicksSince(startTime)!=x){
+            x = getTicksSince(startTime);
+            printf("Timer: %u seconds\n", x);
+        }
     }
 }

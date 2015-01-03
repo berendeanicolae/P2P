@@ -32,7 +32,7 @@ class Application{
         vector< pair<action, string> > requests;
 
         void process();
-
+        void checkIfConnected();
 };
 
 #endif

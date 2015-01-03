@@ -5,6 +5,7 @@
 
 class Client : public State{
     public:
+        Client(int sd_=3);
         int listen(vector< pair<action, string> > &commands, int timeOut);
     private:
         int sd, nfds;
