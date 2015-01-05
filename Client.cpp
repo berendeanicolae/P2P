@@ -29,7 +29,8 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
             perror("[server] Eroare la citirea de la tastatura");
         }
         string input = msg;
-        input.pop_back(); //stergem caracterul linie noua
+		input.erase(input.end()-1, input.end()); //stergem caracterul linie noua
+        //input.pop_back(); //stergem caracterul linie noua
         if (input == "quit"){
             commands.push_back(make_pair(P2P_quit, ""));
         }
