@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "sha1.h"
 #include <algorithm>
 #include <cstring>
 #define PORT 39085
@@ -128,7 +129,46 @@ void Application::run(){
         static int x =-1;
         if (getTicksSince(startTime)!=x){
             x = getTicksSince(startTime);
-            printf("Timer: %u seconds\n", x);
+            //printf("Timer: %u seconds\n", x);
         }
     }
+}
+
+
+long Application::getIP(){
+    //must use some api to find the ip
+    long ip = 0;
+    return ip;
+}
+
+char intToHex(char digit){
+    if (digit<10)
+        return '0'+digit;
+    if (digit<16)
+        return 'a'+digit-10;
+    return -1;
+}
+
+string Application::getUUID(){
+    static unsigned char in[10], out[20];
+    long ip=getIP(), timestamp=getTicks();
+    short port=ntohs(server.sin_port), offset=0;
+    string result;
+
+    memset(in, 0, sizeof(in));
+
+    memcpy(in+offset, &ip, sizeof(ip));
+    offset += sizeof(ip);
+    memcpy(in+offset, &port, sizeof(port));
+    offset += sizeof(port);
+    memcpy(in+offset, &timestamp, sizeof(timestamp));
+    offset += sizeof(timestamp);
+
+    sha1::calc(in, sizeof(in), out);
+    for (unsigned i=0; i<sizeof(out); ++i){
+        result += intToHex(out[i]&15);
+        result += intToHex(out[i]&15<<4);
+    }
+    //combinatie intre IP, port, ticks (sha1)
+    return result;
 }

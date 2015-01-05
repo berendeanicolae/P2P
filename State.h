@@ -12,7 +12,8 @@ enum action{
     P2P_connectedOK,
     P2P_quit,
     P2P_ping,
-    P2P_pong
+    P2P_pong,
+    P2P_search
 };
 
 class State{

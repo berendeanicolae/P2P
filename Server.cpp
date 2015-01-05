@@ -36,6 +36,8 @@ int Server::listen(vector< pair<action, string> > &commands, int timeOut){
         else if (input == "exit"){
             commands.push_back(make_pair(P2P_quit, ""));
         }
+        else if (input == "search"){
+        }
         else{
         }
     }
@@ -49,18 +51,20 @@ int Server::listen(vector< pair<action, string> > &commands, int timeOut){
             recvfrom(d, msg, 100, 0, (sockaddr*)&client, &sock_size);
             ip = client.sin_addr.s_addr;
             port = client.sin_port;
-            printf("[server] S-a conectat un peer %d.%d.%d.%d %d\n", ip&255, (ip&255<<8)>>8, (ip&255<<16)>>ip, (ip&255<<24)>>24, port);
 
             action req=*(action*)msg, type;
             switch (req){
                 case P2P_connectAsPeer:
                 case P2P_connectAsServer:
                     printf("[server] Connection request\n");
+                    printf("[server] S-a conectat un peer %d.%d.%d.%d %d\n", ip&255, (ip&255<<8)>>8, (ip&255<<16)>>ip, (ip&255<<24)>>24, port);
                     sock_size = sizeof(client);
                     memset(msg, 0, sizeof(msg));
                     type = P2P_connectedOK;
                     memcpy(msg, &type, sizeof(type));
                     sendto(sd, msg, sizeof(msg), 0, (sockaddr*)&client, sock_size);
+                    peers.push_back(client);
+                    printf("[server] Numar total de conexiuni: %lu\n", peers.size());
                     break;
                 default:
                     printf("[server] Wrong option\n");

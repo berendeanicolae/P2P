@@ -3,6 +3,7 @@
 
 #include "State.h"
 #include <vector>
+#include <map>
 
 class Server : public State{
     public:
@@ -11,6 +12,7 @@ class Server : public State{
     private:
         int sd, nfds;
         vector<sockaddr_in> peers;
+        map<string, int> uuids; ///contine perechi (uuid, ticks)
 };
 
 #endif //SERVER_H_INCLUDED
