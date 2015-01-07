@@ -21,6 +21,8 @@ class State{
         State();
         virtual ~State();
         virtual int listen(vector< pair<action, string> > &commands, int timeOut=100)=0;
+	private:
+		void ping();
 };
 
 
