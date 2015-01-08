@@ -6,6 +6,8 @@ Client::Client(int sd_): sd(sd_){
     nfds = sd;
 }
 
+void Client::ping() {printf("not implemented");}
+
 int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     fd_set readfds, writefds, errorfds;
     timeval timeout;
@@ -13,6 +15,7 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     sockaddr_in client = {};
 
     //creem multimile de descriptori
+    FD_ZERO(&readfds);FD_ZERO(&writefds);FD_ZERO(&errorfds);
     FD_SET(0, &readfds);
     FD_SET(sd, &readfds);
 
@@ -46,9 +49,19 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
         if (FD_ISSET(d, &errorfds)){// && d!=sd){
         }
         if (FD_ISSET(d, &readfds)){// && d!=sd){
+            action msgType;
+
             socklen_t sock_size = sizeof(client);
             recvfrom(d, msg, 100, 0, (sockaddr*)&client, &sock_size);
-            commands.push_back(make_pair(*(action*)msg, msg+4));
+            msgType = *(action*)msg;
+            switch (msgType){
+                default:
+                    commands.push_back(make_pair(msgType, msg+4));
+                    break;
+                case P2P_ping:
+                    printf("[client] Ping received\n");
+                    break;
+            }
             printf("[client] Am primit mesaj\n");
         }
         if (FD_ISSET(d, &writefds)){// && d!=sd){

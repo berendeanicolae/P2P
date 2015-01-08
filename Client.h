@@ -9,6 +9,7 @@ class Client : public State{
         int listen(vector< pair<action, string> > &commands, int timeOut);
     private:
         int sd, nfds;
+        void ping();
 };
 
 #endif
