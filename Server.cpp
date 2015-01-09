@@ -2,8 +2,12 @@
 #include "network.h"
 #include <cstring>
 
-Server::Server(int sd_): sd(sd_), pingAfter(10), pingTimeout(20), maxPingTries(3), betweenPings(1){
+Server::Server(sockaddr_in server_, int sd_): server(server_), sd(sd_), pingAfter(10), pingTimeout(20), maxPingTries(3), betweenPings(1){
     nfds = sd;
+}
+
+unsigned short Server::getPort(){
+    return server.sin_port;
 }
 
 void Server::ping(){
@@ -67,7 +71,8 @@ int Server::listen(vector< pair<action, string> > &commands, int timeOut){
         }
         else if (input == "search"){
         }
-        else{
+        else if (input == "uuid"){
+            printf("[UUID] %s\n", getUUID());
         }
     }
     for (int d=3; d<=nfds; ++d){

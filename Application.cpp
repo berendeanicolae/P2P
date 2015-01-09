@@ -1,5 +1,4 @@
 #include "Application.h"
-#include "sha1.h"
 #include <algorithm>
 #include <cstring>
 #define PORT 39085
@@ -37,7 +36,7 @@ Application::Application(): quit(0), state(0){
     requests.push_back(make_pair(P2P_connectAsPeer, ipPort));
 
     //process initial connect request
-    state = new Client(sd);
+    state = new Client(server, sd);
     process();
 }
 
@@ -112,7 +111,7 @@ void Application::checkIfConnected(){
             }
             // schimb state din client in server
             delete state;
-            state = new Server(sd);
+            state = new Server(server, sd);
             connected = 1;
             printf("Nu a fost gasit server de bootstrap.\n");
         }
@@ -134,41 +133,3 @@ void Application::run(){
     }
 }
 
-
-long Application::getIP(){
-    //must use some api to find the ip
-    long ip = 0;
-    return ip;
-}
-
-char intToHex(char digit){
-    if (digit<10)
-        return '0'+digit;
-    if (digit<16)
-        return 'a'+digit-10;
-    return -1;
-}
-
-string Application::getUUID(){
-    static unsigned char in[10], out[20];
-    long ip=getIP(), timestamp=getTicks();
-    short port=ntohs(server.sin_port), offset=0;
-    string result;
-
-    memset(in, 0, sizeof(in));
-
-    memcpy(in+offset, &ip, sizeof(ip));
-    offset += sizeof(ip);
-    memcpy(in+offset, &port, sizeof(port));
-    offset += sizeof(port);
-    memcpy(in+offset, &timestamp, sizeof(timestamp));
-    offset += sizeof(timestamp);
-
-    sha1::calc(in, sizeof(in), out);
-    for (unsigned i=0; i<sizeof(out); ++i){
-        result += intToHex(out[i]&15);
-        result += intToHex(out[i]&15<<4);
-    }
-    //combinatie intre IP, port, ticks (sha1)
-    return result;
-}

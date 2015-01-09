@@ -1,6 +1,7 @@
 #ifndef STATE_H_INCLUDED
 #define STATE_H_INCLUDED
 
+#include <cstring>
 #include <vector>
 #include <string>
 #include "network.h"
@@ -13,6 +14,7 @@ enum action{
     P2P_quit,
     P2P_ping,
     P2P_pong,
+    P2P_UUID,
     P2P_search
 };
 
@@ -23,6 +25,10 @@ class State{
         virtual int listen(vector< pair<action, string> > &commands, int timeOut=100)=0;
 	protected:
 		virtual void ping()=0;
+        virtual unsigned short getPort() {return 0;}
+		const char* getUUID();
+    private:
+		int getIP();
 };
 
 

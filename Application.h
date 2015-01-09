@@ -33,8 +33,6 @@ class Application{
 
         void process();
         void checkIfConnected();
-        long getIP();
-        string getUUID();
 };
 
 #endif

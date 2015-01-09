@@ -2,8 +2,12 @@
 #include "network.h"
 #include <cstring>
 
-Client::Client(int sd_): sd(sd_){
+Client::Client(sockaddr_in server_, int sd_): server(server_), sd(sd_){
     nfds = sd;
+}
+
+unsigned short Client::getPort(){
+    return server.sin_port;
 }
 
 void Client::ping() {printf("not implemented");}
@@ -19,8 +23,8 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     FD_SET(0, &readfds);
     FD_SET(sd, &readfds);
 
-    timeout.tv_sec = timeOut/100;
-    timeout.tv_usec = timeOut%100;
+    timeout.tv_sec = timeOut/1000;
+    timeout.tv_usec = timeOut%1000;
     select(nfds+1, &readfds, &writefds, &errorfds, &timeout);
 
     /*
