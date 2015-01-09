@@ -11,7 +11,7 @@ void Client::ping() {printf("not implemented");}
 int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     fd_set readfds, writefds, errorfds;
     timeval timeout;
-    char msg[100]={};
+    char msgBuffer[100]={};
     sockaddr_in client = {};
 
     //creem multimile de descriptori
@@ -28,10 +28,10 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     */
     //verificam separat stdin, stdout, stderr
     if (FD_ISSET(0, &readfds)){
-        if (read(0, msg, sizeof(msg))<=0){
+        if (read(0, msgBuffer, sizeof(msgBuffer))<=0){
             perror("[server] Eroare la citirea de la tastatura");
         }
-        string input = msg;
+        string input = msgBuffer;
 		input.erase(input.end()-1, input.end()); //stergem caracterul linie noua
         //input.pop_back(); //stergem caracterul linie noua
         if (input == "quit"){
@@ -44,25 +44,32 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
         }
     }
     for (int d=3; d<=nfds; ++d){
-        memset(msg, 0, sizeof(msg));
+        memset(msgBuffer, 0, sizeof(msgBuffer));
 
         if (FD_ISSET(d, &errorfds)){// && d!=sd){
         }
         if (FD_ISSET(d, &readfds)){// && d!=sd){
             action msgType;
+            int ip, port;
 
+            printf("[client] Am primit mesaj\n");
             socklen_t sock_size = sizeof(client);
-            recvfrom(d, msg, 100, 0, (sockaddr*)&client, &sock_size);
-            msgType = *(action*)msg;
+            recvfrom(d, msgBuffer, 100, 0, (sockaddr*)&client, &sock_size);
+            msgType = *(action*)msgBuffer;
             switch (msgType){
                 default:
-                    commands.push_back(make_pair(msgType, msg+4));
+                    commands.push_back(make_pair(msgType, msgBuffer+4));
                     break;
                 case P2P_ping:
-                    printf("[client] Ping received\n");
+                    ip = client.sin_addr.s_addr;
+                    port = client.sin_port;
+                    printf("[client] Ping from %d.%d.%d.%d %d\n", ip&255, (ip&255<<8)>>8, (ip&255<<16)>>ip, (ip&255<<24)>>24, port);
+                    memset(&msgBuffer, 0, sizeof(msgBuffer));
+                    msgType = P2P_pong;
+                    memcpy(msgBuffer, &msgType, sizeof(msgType));
+                    sendto(sd, msgBuffer, sizeof(msgType), 0, (sockaddr*)&client, sizeof(client));
                     break;
             }
-            printf("[client] Am primit mesaj\n");
         }
         if (FD_ISSET(d, &writefds)){// && d!=sd){
         }

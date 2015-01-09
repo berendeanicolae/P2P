@@ -24,6 +24,9 @@ void Server::ping(){
                 }
             }
             if (getTicks()-it->lastPong > pingTimeout){ ///nu a raspuns
+                int ip = it->address.sin_addr.s_addr;
+                int port = it->address.sin_port;
+                printf("[server] %d.%d.%d.%d %d inaccesibil\n", ip&255, (ip&255<<8)>>8, (ip&255<<16)>>ip, (ip&255<<24)>>24, port);
                 it = peers.erase(it);
                 --it;
             }
@@ -92,6 +95,19 @@ int Server::listen(vector< pair<action, string> > &commands, int timeOut){
                     peers.push_back(client);
                     ///inainte de push verificam sa nu fie in lista (nu e deja peer)
                     printf("[server] Numar total de conexiuni: %lu\n", peers.size());
+                    break;
+                case P2P_pong:
+                    for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
+                        if (!memcmp(&it->address, &client, sizeof(it->address))){
+                            ///client a raspuns la ping
+                            ip = it->address.sin_addr.s_addr;
+                            port = it->address.sin_port;
+                            printf("[server] Pong from %d.%d.%d.%d %d\n", ip&255, (ip&255<<8)>>8, (ip&255<<16)>>ip, (ip&255<<24)>>24, port);
+                            it->lastPong = getTicks();
+                            it->tries = 0;
+                            break;
+                        }
+                    }
                     break;
                 default:
                     printf("[server] Wrong option\n");
