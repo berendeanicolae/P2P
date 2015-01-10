@@ -81,10 +81,6 @@ void Application::process(){
 void Application::checkIfConnected(){
     if (!connected){
         if (getTicks()-ticksSinceOffline > connectTimeout){
-            --connectTimeout;
-            return;
-        }
-        else{
             //daca a trecut connectionTimeout
             //Nu exista server in retea, deci trec in mod server
 
