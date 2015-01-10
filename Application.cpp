@@ -2,8 +2,8 @@
 #include <algorithm>
 #include <cstring>
 #define PORT 39085
-//#define IP "85.122.23.145"
-#define IP "127.0.0.1"
+#define IP "85.122.23.145"
+//#define IP "127.0.0.1"
 
 string intToString(int value){
     string str;

@@ -35,4 +35,14 @@ class Application{
         void checkIfConnected();
 };
 
+
+class FileDir{
+    string name;
+    FileDir *next;
+};
+class File: public FileDir{
+};
+class Dir: public FileDir{
+};
+
 #endif
