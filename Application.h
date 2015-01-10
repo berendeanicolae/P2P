@@ -22,7 +22,7 @@ class Application{
     private:
         //starea aplicatiei
         bool quit, connected;
-        int connectTimeout;
+        int connectTimeout, ticksSinceOffline;
     private:
         //
         int sd;

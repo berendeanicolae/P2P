@@ -1,11 +1,24 @@
 #include "State.h"
 #include "sha1.h"
 
-State::State() {}
+State::State(): uuidLifetime(30) {}
 State::~State() {}
 
 int State::getIP(){
     return 0; ///to be implemented in the future if necesary
+}
+
+void State::cleanUUIDs(){
+    /// Facem update la multimea de uuid-uri poate fi mutat intr-o functie (eg. update)
+    for (map<string, int>::iterator it=uuids.begin(); it!=uuids.end();){ //nu e neaparat necesar
+        if (getTicks()-it->second>uuidLifetime){
+            printf("[server] removed uuid %s\n", it->first.c_str());
+            uuids.erase(it++);
+        }
+        else{
+            ++it;
+        }
+    }
 }
 
 static char intToHex(char digit){
@@ -24,7 +37,6 @@ const char *State::getUUID(){
 
     memset(in, 0, sizeof(in));
 
-    printf("[UUID] %ld %ld %d\n", ip, timestamp, port);
     memcpy(in+offset, &ip, sizeof(ip));
     offset += sizeof(ip);
     memcpy(in+offset, &port, sizeof(port));
@@ -32,7 +44,6 @@ const char *State::getUUID(){
     memcpy(in+offset, &timestamp, sizeof(timestamp));
     offset += sizeof(timestamp);
 
-    printf("off %d\n", offset);
     sha1::calc(in, offset, out);
     for (unsigned i=0; i<sizeof(out); ++i){
         result[2*i] = intToHex(out[i]&15);

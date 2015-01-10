@@ -31,6 +31,7 @@ Application::Application(): quit(0), state(0){
 
     //initial connect request
     connected = 0;
+    ticksSinceOffline = getTicks();
     connectTimeout = 3;
     string ipPort = string(IP)+" "+intToString(PORT);
     requests.push_back(make_pair(P2P_connectAsPeer, ipPort));
@@ -79,7 +80,7 @@ void Application::process(){
 
 void Application::checkIfConnected(){
     if (!connected){
-        if (connectTimeout>0){
+        if (getTicks()-ticksSinceOffline > connectTimeout){
             --connectTimeout;
             return;
         }

@@ -15,7 +15,6 @@ void Client::ping() {printf("not implemented");}
 int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     fd_set readfds, writefds, errorfds;
     timeval timeout;
-    char msgBuffer[100]={};
     sockaddr_in client = {};
 
     //creem multimile de descriptori
@@ -27,11 +26,14 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     timeout.tv_usec = timeOut%1000;
     select(nfds+1, &readfds, &writefds, &errorfds, &timeout);
 
+    cleanUUIDs();
+
     /*
       Putem avea ori intrari de la tastatura (0), ori mesaje legate de retea (3), ori bucati de fisiere
     */
     //verificam separat stdin, stdout, stderr
     if (FD_ISSET(0, &readfds)){
+        memset(msgBuffer, 0, sizeof(msgBuffer));
         if (read(0, msgBuffer, sizeof(msgBuffer))<=0){
             perror("[server] Eroare la citirea de la tastatura");
         }
@@ -54,25 +56,35 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
         }
         if (FD_ISSET(d, &readfds)){// && d!=sd){
             action msgType;
-            int ip, port;
+            char ipString[40];
+            int port;
 
             printf("[client] Am primit mesaj\n");
             socklen_t sock_size = sizeof(client);
             recvfrom(d, msgBuffer, 100, 0, (sockaddr*)&client, &sock_size);
-            msgType = *(action*)msgBuffer;
+            action *Paction=(action*)msgBuffer;
+            msgType = *Paction;
             switch (msgType){
                 default:
                     commands.push_back(make_pair(msgType, msgBuffer+4));
                     break;
                 case P2P_ping:
-                    ip = client.sin_addr.s_addr;
+                    inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
                     port = client.sin_port;
-                    printf("[client] Ping from %d.%d.%d.%d %d\n", ip&255, (ip&255<<8)>>8, (ip&255<<16)>>ip, (ip&255<<24)>>24, port);
+                    printf("[client] Ping from %s %d\n", ipString, port);
                     memset(&msgBuffer, 0, sizeof(msgBuffer));
                     msgType = P2P_pong;
                     memcpy(msgBuffer, &msgType, sizeof(msgType));
                     sendto(sd, msgBuffer, sizeof(msgType), 0, (sockaddr*)&client, sizeof(client));
                     break;
+                case P2P_search:{
+                    inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
+                    port = client.sin_port;
+                    string uuid(msgBuffer+sizeof(msgType), msgBuffer+sizeof(msgType)+40);
+                    uuids[uuid] = getTicks();
+                    printf("[client] Search uuid %s\n", uuid.c_str());
+                    break;
+                }
             }
         }
         if (FD_ISSET(d, &writefds)){// && d!=sd){

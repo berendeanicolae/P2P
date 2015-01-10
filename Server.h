@@ -22,10 +22,8 @@ class Server : public State{
         int sd, nfds;
         void ping();
         unsigned short getPort();
-        list<Peer> peers; ///trebuie sa contina momentul ultimului raspuns pong si nr de incercari
-        map<string, int> uuids; ///contine perechi (uuid, ticks)
+        list<Peer> peers, serverPeers; ///trebuie sa contina momentul ultimului raspuns pong si nr de incercari
 
-        char msgBuffer[100];
         const int pingAfter, pingTimeout, maxPingTries, betweenPings;
 };
 
