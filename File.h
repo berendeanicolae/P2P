@@ -11,9 +11,11 @@
 using namespace std;
 
 class Dir;
+class Root;
 
 class FileDir{
     friend class Dir;
+    friend class Root;
 	protected:
 		char* name;
 		FileDir *next;
