@@ -147,5 +147,12 @@ Root::Root(const char* dirName): Dir(dirName), path(0){
 }
 Root::~Root() {if (path) delete[] path;}
 FileDir* Root::find(const char *exp){
+    if (!name)
+        return 0;
+    for (FileDir *p=first; p; p=p->next){
+        FileDir *retValue;
+        if ( (retValue=p->find(exp)) )
+            return retValue;
+    }
     return 0;
 }
