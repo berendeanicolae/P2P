@@ -3,13 +3,12 @@
 
 #include <cstdio>
 #include <cstring>
+#include <regex>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #define MAX_PATH 255
-
-char fullPath[MAX_PATH];
-struct stat st;
+using namespace std;
 
 class Dir;
 
@@ -21,6 +20,9 @@ class FileDir{
 
 	    FileDir();
 	    virtual ~FileDir();
+	    virtual FileDir* find(regex& exp);
+    public:
+        virtual FileDir* find(const char *exp) = 0;
 };
 
 class File: public FileDir{
@@ -28,6 +30,8 @@ class File: public FileDir{
 	protected:
 	    File(const char *name_);
 	    virtual ~File() {}
+    public:
+        virtual FileDir* find(const char *exp);
 };
 
 class Dir: public FileDir{
@@ -36,6 +40,9 @@ class Dir: public FileDir{
 
 		Dir(const char *dirName);
 		virtual ~Dir();
+        virtual FileDir* find(regex& exp);
+    public:
+        virtual FileDir* find(const char *exp);
 };
 
 class Root: public Dir{
@@ -44,6 +51,8 @@ class Root: public Dir{
     public:
         Root(const char* dirName);
         ~Root();
+
+        FileDir* find(const char *exp);
 };
 
 #endif

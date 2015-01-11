@@ -1,4 +1,9 @@
 #include "File.h"
+#include <regex>
+using namespace std;
+
+char fullPath[MAX_PATH];
+struct stat st;
 
 void baseName(const char *path, char **dest){
     const char *s, *e;
@@ -18,6 +23,14 @@ void baseName(const char *path, char **dest){
 
 FileDir::FileDir(): name(0), next(0) {}
 FileDir::~FileDir() {if (name) delete[] name;}
+FileDir* FileDir::find(regex& exp){
+    if (!name)
+        return 0;
+
+    if (regex_match(name, exp))
+        return this;
+    return 0;
+}
 
 File::File(const char *name_){
     int len;
@@ -31,6 +44,13 @@ File::File(const char *name_){
         strcpy(name, name_);
         name[len] = 0;
     }
+}
+FileDir* File::find(const char *exp){
+    printf("file %s\n", name);
+    if (regex_match("", regex(exp))){
+        return this;
+    }
+    return 0;
 }
 
 Dir::Dir(const char *dirName): first(0){
@@ -51,7 +71,8 @@ Dir::Dir(const char *dirName): first(0){
     if ( (dir=opendir(path)) ){
         baseName(dirName, &name);
         while ( (ent=readdir(dir)) ){
-            if (ent->d_name[0]!='.'){ //ignoram fisierele ascunse, directorul curent si parintele
+            //ignoram fisierele ascunse
+            if (ent->d_name[0]!='.'){
                 strncpy(fullPath, path, MAX_PATH);
                 strcat(fullPath, ent->d_name);
                 lstat(fullPath, &st);
@@ -70,7 +91,7 @@ Dir::Dir(const char *dirName): first(0){
         closedir(dir);
     }
     else{
-        printf("dir nu exista");
+        //dir nu exista
     }
 }
 Dir::~Dir(){
@@ -80,7 +101,30 @@ Dir::~Dir(){
         delete aux;
     }
 }
-
+FileDir* Dir::find(const char *exp){
+    if (!name)
+        return 0;
+    if (regex_match(name, regex(exp)))
+        return this;
+    for (FileDir *p=first; p; p=p->next){
+        FileDir *retValue;
+        if ( (retValue=p->find(exp)) )
+            return retValue;
+    }
+    return 0;
+}
+FileDir* Dir::find(regex& exp){
+    if (!name)
+        return 0;
+    if (regex_match(name, exp))
+        return this;
+    for (FileDir *p=first; p; p=p->next){
+        FileDir *retValue;
+        if ( (retValue=p->find(exp)) )
+            return retValue;
+    }
+    return 0;
+}
 
 Root::Root(const char* dirName): Dir(dirName), path(0){
     if (name){
@@ -102,3 +146,6 @@ Root::Root(const char* dirName): Dir(dirName), path(0){
     }
 }
 Root::~Root() {if (path) delete[] path;}
+FileDir* Root::find(const char *exp){
+    return 0;
+}

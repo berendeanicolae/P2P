@@ -1,4 +1,5 @@
 #include "Application.h"
+#include <pwd.h>
 #include <algorithm>
 #include <cstring>
 #define PORT 39085
@@ -19,6 +20,15 @@ string intToString(int value){
 }
 
 Application::Application(): quit(0), state(0){
+    struct passwd *pw;
+    if ( !(pw=getpwuid(getuid())) ){
+        perror("Eroare la getpwuid(getuid())");
+        return;
+    }
+    //inirtializam directorul shared
+    shared = pw->pw_dir;
+    root = new Root(shared);
+
     //create socket
 	if ( (sd=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
 		perror("Eroare la creare socket");

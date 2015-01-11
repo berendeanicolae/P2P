@@ -5,6 +5,7 @@
 #include "State.h"
 #include "Client.h"
 #include "Server.h"
+#include "File.h"
 #include <vector>
 #include <string>
 using namespace std;
@@ -30,6 +31,8 @@ class Application{
     private:
         State *state;
         vector< pair<action, string> > requests;
+        const char *shared;
+        FileDir *root;
 
         void process();
         void checkIfConnected();
