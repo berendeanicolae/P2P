@@ -20,13 +20,15 @@ class Application{
         Application();
         ~Application();
         void run();
+
     private:
         //starea aplicatiei
         bool quit, connected;
         int connectTimeout, ticksSinceOffline;
     private:
         //
-        int sd;
+        int dss[sdmaxvalue]; //descriptors
+        unsigned short pts[portmaxvalue]; //ports
         sockaddr_in server;
     private:
         State *state;

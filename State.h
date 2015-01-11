@@ -18,6 +18,18 @@ enum action{
     P2P_search
 };
 
+enum sd{
+    udpsd,
+    tcpsd,
+    nfds,
+    sdmaxvalue
+};
+enum port{
+    udpport,
+    tcpport,
+    portmaxvalue
+};
+
 class State{
     public:
         State();
@@ -25,12 +37,14 @@ class State{
         virtual int listen(vector< pair<action, string> > &commands, int timeOut=100)=0;
 	protected:
 		virtual void ping()=0;
-        virtual unsigned short getPort() {return 0;}
 		const char* getUUID();
 		char msgBuffer[100];
 		map<string, int> uuids; ///perechi (hash, moment primire)
 		void cleanUUIDs();
 		int uuidLifetime;
+
+		int udpsd, tcpsd, nfds;
+		int udpport, tcpport;
     private:
 		int getIP();
 };

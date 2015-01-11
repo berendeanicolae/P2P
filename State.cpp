@@ -32,7 +32,7 @@ static char intToHex(char digit){
 const char *State::getUUID(){
     static unsigned char in[20], out[20]; ///2*long+short=18. Poate pe viitor trebuie marit
     long ip=getIP(), timestamp=getTicks();
-    unsigned short port=getPort(), offset=0;
+    unsigned short port=udpport, offset=0;
     static char result[41]={};
 
     memset(in, 0, sizeof(in));
