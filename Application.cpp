@@ -30,27 +30,30 @@ Application::Application(): quit(0), state(0){
     root = new Root(shared);
 
     socklen_t sz=sizeof(server);
+    sds[nfds] = 2;
     //create socket UDP
-	if ( (dss[udpsd]=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
+	if ( (sds[udpsd]=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
 		perror("Eroare la creare socket UDP");
 	}
+	sds[nfds] = max(sds[nfds], sds[udpsd]);
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(0);
-	bind(dss[udpsd], (sockaddr*)&server, sizeof(server));
-	getsockname(dss[udpsd], (sockaddr*)&server, &sz);
+	bind(sds[udpsd], (sockaddr*)&server, sizeof(server));
+	getsockname(sds[udpsd], (sockaddr*)&server, &sz);
 	pts[udpport] = server.sin_port;
 
     //create socket TCP
-	if ( (dss[tcpsd]=socket(AF_INET, SOCK_STREAM, 0)) == -1){
+	if ( (sds[tcpsd]=socket(AF_INET, SOCK_STREAM, 0)) == -1){
 	    perror("Eroare la creare socket TCP");
 	}
+	sds[nfds] = max(sds[nfds], sds[tcpsd]);
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(0);
-	bind(dss[tcpsd], (sockaddr*)&server, sizeof(server));
-	listen(dss[tcpsd], 5);
-	getsockname(dss[tcpsd], (sockaddr*)&server, &sz);
+	bind(sds[tcpsd], (sockaddr*)&server, sizeof(server));
+	listen(sds[tcpsd], 5);
+	getsockname(sds[tcpsd], (sockaddr*)&server, &sz);
 	pts[tcpport] = server.sin_port;
 
     //initial connect request
@@ -64,7 +67,7 @@ Application::Application(): quit(0), state(0){
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr(IP);
     server.sin_port = htons(PORT);
-    state = new Client(server, dss[udpsd]);
+    state = new Client(sds, pts);
     process();
 }
 
@@ -72,8 +75,8 @@ Application::~Application(){
     if (state){
         delete state;
     }
-    close(dss[udpsd]);
-    close(dss[tcpsd]);
+    close(sds[udpsd]);
+    close(sds[tcpsd]);
 }
 
 void Application::process(){
@@ -89,7 +92,7 @@ void Application::process(){
             case P2P_connectAsServer:
                 memcpy(msg, &type, sizeof(type));
                 memcpy(msg+sizeof(type), requests[i].second.c_str(), requests[i].second.size());
-                sendto(dss[udpsd], msg, sizeof(msg), 0, (sockaddr*)&server, sock_size);
+                sendto(sds[udpsd], msg, sizeof(msg), 0, (sockaddr*)&server, sock_size);
                 break;
             case P2P_connectedOK:
                 connected = 1;
@@ -115,8 +118,8 @@ void Application::checkIfConnected(){
             // optiunea de reutilizare a adresei pentru socket
             int opt;
 
-            close(dss[udpsd]); //creem un nou socket si il atasam adresei dorite
-            if ( (dss[udpsd]=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
+            close(sds[udpsd]); //creem un nou socket si il atasam adresei dorite
+            if ( (sds[udpsd]=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
                 perror("Eroare la creare socket");
             }
 
@@ -127,16 +130,16 @@ void Application::checkIfConnected(){
 
             opt = 1;
             // setez optiunea de a reutiliza portul
-            setsockopt(dss[udpsd], SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
+            setsockopt(sds[udpsd], SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
             // atasez socketul
-            if (bind(dss[udpsd], (sockaddr*)&server, sizeof(sockaddr))==-1){
+            if (bind(sds[udpsd], (sockaddr*)&server, sizeof(sockaddr))==-1){
                 perror("[server]Eroare la bind()");
                 quit = 1;
                 return;
             }
             // schimb state din client in server
             delete state;
-            state = new Server(server, dss[udpsd]);
+            state = new Server(sds, pts);
             connected = 1;
             printf("Nu a fost gasit server de bootstrap.\n");
         }

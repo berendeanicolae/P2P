@@ -27,7 +27,7 @@ class Application{
         int connectTimeout, ticksSinceOffline;
     private:
         //
-        int dss[sdmaxvalue]; //descriptors
+        int sds[sdmaxvalue]; //descriptors
         unsigned short pts[portmaxvalue]; //ports
         sockaddr_in server;
     private:

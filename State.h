@@ -32,7 +32,7 @@ enum port{
 
 class State{
     public:
-        State();
+        State(const int* sds_, const unsigned short *pts_);
         virtual ~State();
         virtual int listen(vector< pair<action, string> > &commands, int timeOut=100)=0;
 	protected:
@@ -43,8 +43,8 @@ class State{
 		void cleanUUIDs();
 		int uuidLifetime;
 
-		int udpsd, tcpsd, nfds;
-		int udpport, tcpport;
+		int sds[sdmaxvalue];
+		unsigned short pts[portmaxvalue];
     private:
 		int getIP();
 };

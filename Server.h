@@ -15,11 +15,10 @@ class Server : public State{
             Peer(sockaddr_in address_): address(address_), lastPing(getTicks()), lastPong(getTicks()), tries(0) {}
     };
     public:
-        Server(sockaddr_in server_, int sd_=3);
+        Server(const int *sds, const unsigned short *pts);
         int listen(vector< pair<action, string> > &commands, int timeOut);
     private:
         sockaddr_in server;
-        int sd, nfds;
         void ping();
         unsigned short getPort();
         list<Peer> peers, serverPeers; ///trebuie sa contina momentul ultimului raspuns pong si nr de incercari

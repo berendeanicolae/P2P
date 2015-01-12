@@ -2,9 +2,7 @@
 #include "network.h"
 #include <cstring>
 
-Client::Client(sockaddr_in server_, int sd_): server(server_), sd(sd_){
-    nfds = sd;
-}
+Client::Client(const int *sds, const unsigned short *pts): State(sds, pts) {}
 
 unsigned short Client::getPort(){
     return server.sin_port;
@@ -20,11 +18,11 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
     //creem multimile de descriptori
     FD_ZERO(&readfds);FD_ZERO(&writefds);FD_ZERO(&errorfds);
     FD_SET(0, &readfds);
-    FD_SET(sd, &readfds);
+    FD_SET(sds[udpsd], &readfds);
 
     timeout.tv_sec = timeOut/1000;
     timeout.tv_usec = timeOut%1000;
-    select(nfds+1, &readfds, &writefds, &errorfds, &timeout);
+    select(sds[nfds]+1, &readfds, &writefds, &errorfds, &timeout);
 
     cleanUUIDs();
 
@@ -49,7 +47,7 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
         else{
         }
     }
-    for (int d=3; d<=nfds; ++d){
+    for (int d=3; d<=sds[nfds]; ++d){
         memset(msgBuffer, 0, sizeof(msgBuffer));
 
         if (FD_ISSET(d, &errorfds)){// && d!=sd){
@@ -75,7 +73,7 @@ int Client::listen(vector< pair<action, string> > &commands, int timeOut){
                     memset(&msgBuffer, 0, sizeof(msgBuffer));
                     msgType = P2P_pong;
                     memcpy(msgBuffer, &msgType, sizeof(msgType));
-                    sendto(sd, msgBuffer, sizeof(msgType), 0, (sockaddr*)&client, sizeof(client));
+                    sendto(sds[udpsd], msgBuffer, sizeof(msgType), 0, (sockaddr*)&client, sizeof(client));
                     break;
                 case P2P_search:{
                     inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));

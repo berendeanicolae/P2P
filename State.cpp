@@ -1,7 +1,13 @@
 #include "State.h"
 #include "sha1.h"
 
-State::State(): uuidLifetime(30) {}
+State::State(const int* sds_, const unsigned short *pts_): uuidLifetime(30){
+    sds[udpsd] = sds_[udpsd];
+    sds[tcpsd] = sds_[tcpsd];
+    sds[nfds] = sds_[nfds];
+    pts[udpport] = pts_[udpport];
+    pts[tcpport] = pts_[tcpport];
+}
 State::~State() {}
 
 int State::getIP(){
