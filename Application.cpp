@@ -18,7 +18,7 @@ string intToString(int value){
     return str;
 }
 
-Application::Application(): quit(0), state(0){
+Application::Application(): quit(0), state(0), root(0){
     struct passwd *pw;
     if ( !(pw=getpwuid(getuid())) ){
         perror("Eroare la getpwuid(getuid())");
@@ -73,6 +73,9 @@ Application::Application(): quit(0), state(0){
 Application::~Application(){
     if (state){
         delete state;
+    }
+    if (root){
+        delete root;
     }
     close(sds[udpsd]);
     close(sds[tcpsd]);

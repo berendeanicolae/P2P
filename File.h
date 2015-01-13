@@ -21,10 +21,10 @@ class FileDir{
 		FileDir *next;
 
 	    FileDir();
-	    virtual ~FileDir();
 	    virtual FileDir* find(regex& exp);
     public:
         virtual FileDir* find(const char *exp) = 0;
+	    virtual ~FileDir();
 };
 
 class File: public FileDir{

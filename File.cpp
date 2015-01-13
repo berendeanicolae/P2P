@@ -78,12 +78,12 @@ Dir::Dir(const char *dirName): first(0){
                 lstat(fullPath, &st);
                 if (S_ISDIR(st.st_mode)){
                     FileDir *child = new Dir(fullPath);
-                    //child->next = first;
+                    child->next = first;
                     first = child;
                 }
                 else{
                     FileDir *child = new File(ent->d_name);
-                    //child->next = first;
+                    child->next = first;
                     first = child;
                 }
             }
