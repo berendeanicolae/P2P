@@ -6,25 +6,16 @@
 #include <vector>
 #include <string>
 #include "network.h"
+#include "Message.h"
 using namespace std;
 
-enum action{
-    P2P_connectAsPeer,
-    P2P_connectAsServer,
-    P2P_connectedOK,
-    P2P_quit,
-    P2P_ping,
-    P2P_pong,
-    P2P_search
-};
-
-enum sd{
+enum sd{ //sds
     udpsd,
     tcpsd,
     nfds,
     sdmaxvalue
 };
-enum port{
+enum port{ //ports
     udpport,
     tcpport,
     portmaxvalue
@@ -34,7 +25,7 @@ class State{
     public:
         State(const int* sds_, const unsigned short *pts_);
         virtual ~State();
-        virtual int listen(vector< pair<action, string> > &commands, int timeOut=100)=0;
+        virtual int listen(vector< pair<MSG, string> > &commands, int timeOut=100)=0;
 	protected:
 		virtual void ping()=0;
 		const char* getUUID();
@@ -46,7 +37,9 @@ class State{
 		int sds[sdmaxvalue];
 		unsigned short pts[portmaxvalue];
     private:
-		int getIP();
+		virtual int getIP();
+    protected: //aceste functii pot fi implementate in alt cpp (nu tin de state)
+        void stringStrip(string& str);
 };
 
 

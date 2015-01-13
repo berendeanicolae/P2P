@@ -1,5 +1,6 @@
 #include "State.h"
 #include "sha1.h"
+#include <cctype> //added for stringStrip
 
 State::State(const int* sds_, const unsigned short *pts_): uuidLifetime(30){
     sds[udpsd] = sds_[udpsd];
@@ -12,6 +13,13 @@ State::~State() {}
 
 int State::getIP(){
     return 0; ///to be implemented in the future if necesary
+}
+
+void State::stringStrip(string& str){
+    string::iterator l, r;
+    for (l=str.begin(); l!=str.end() && isspace(*l); ++l);
+    for (r=str.end(); l!=r && isspace(*r); --r);
+    str = string(l, r);
 }
 
 void State::cleanUUIDs(){

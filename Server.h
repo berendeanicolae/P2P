@@ -16,11 +16,10 @@ class Server : public State{
     };
     public:
         Server(const int *sds, const unsigned short *pts);
-        int listen(vector< pair<action, string> > &commands, int timeOut);
+        int listen(vector< pair<MSG, string> > &commands, int timeOut);
     private:
         sockaddr_in server;
         void ping();
-        unsigned short getPort();
         list<Peer> peers, serverPeers; ///trebuie sa contina momentul ultimului raspuns pong si nr de incercari
 
         const int pingAfter, pingTimeout, maxPingTries, betweenPings;

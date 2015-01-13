@@ -5,10 +5,6 @@
 Server::Server(const int *sds, const unsigned short *pts): State(sds, pts), pingAfter(10), pingTimeout(20), maxPingTries(3), betweenPings(1){
 }
 
-unsigned short Server::getPort(){
-    return server.sin_port;
-}
-
 void Server::ping(){
     for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
         if (getTicks()-it->lastPong > pingAfter){ ///a trecut timp (pot da ping)
@@ -18,7 +14,7 @@ void Server::ping(){
                     int port = it->address.sin_port;
 
                     memset(msgBuffer, 0, sizeof(msgBuffer));
-                    action msgType = P2P_ping;
+                    MSG msgType = MSG_ping;
                     memcpy(msgBuffer, &msgType, sizeof(msgType));
                     sendto(sds[udpsd], msgBuffer, sizeof(msgBuffer), 0, (sockaddr*)&it->address, sizeof(it->address));
                     inet_ntop(it->address.sin_family, &it->address.sin_addr.s_addr, ipString, sizeof(ipString));
@@ -40,7 +36,7 @@ void Server::ping(){
     }
 }
 
-int Server::listen(vector< pair<action, string> > &commands, int timeOut){
+int Server::listen(vector< pair<MSG, string> > &commands, int timeOut){
     fd_set readfds, writefds, errorfds; //multimile de descriptori de citire, scriere si eroare
     timeval timeout;
     sockaddr_in client = {};
@@ -69,34 +65,32 @@ int Server::listen(vector< pair<action, string> > &commands, int timeOut){
 		input.erase(input.end()-1, input.end());
         //input.pop_back(); //stergem caracterul linie noua
         if (input == "quit"){
-            commands.push_back(make_pair(P2P_quit, ""));
+            commands.push_back(make_pair(MSG_quit, ""));
         }
         else if (input == "exit"){
-            commands.push_back(make_pair(P2P_quit, ""));
+            commands.push_back(make_pair(MSG_quit, ""));
         }
         else if (!input.compare(0, strlen("search"), "search")){
             const char *uuid = getUUID();
             sockaddr_in tcpserver = {};
             socklen_t sz = sizeof(tcpserver);
 
-            printf("[Search] %s\n", uuid);
+            //calculam expresia regulata
+            input.erase(input.begin(), input.begin()+strlen("search"));
+            stringStrip(input);
+            printf("[Search] %s %s\n", input.c_str(), uuid);
             uuids[uuid] = getTicks();
             getsockname(sds[tcpsd], (sockaddr*)&tcpserver, &sz);///poate nu avem nevoie. vrem sa punem
-            printf("%s\n", ipString);
             //trimit la toti peeri mesajul
             for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
-                int offset = 0;
-                action msgType = P2P_search;
+                Message msg;
 
-                memset(msgBuffer, 0, sizeof(msgBuffer));
-                memcpy(msgBuffer+offset, &msgType, sizeof(msgType));
-                offset += sizeof(msgType);
-                memcpy(msgBuffer+offset, uuid, strlen(uuid));
-                offset += strlen(uuid);
-                ///adaugam si expresia cautata
+                msg.push_back(MSG_searchNoIP);
+                msg.push_back(40, uuid);
+                msg.push_back(input.size(), input.c_str());
                 ///punem si in commands
 
-                sendto(sds[udpsd], msgBuffer, sizeof(msgBuffer), 0, (sockaddr*)&it->address, sizeof(it->address));
+                sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&it->address, sizeof(it->address));
             }
         }
         else{
@@ -114,25 +108,25 @@ int Server::listen(vector< pair<action, string> > &commands, int timeOut){
             inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
             port = client.sin_port;
 
-            action *p = (action*)msgBuffer;
-            action msgType=*p;
+            MSG *p = (MSG*)msgBuffer;
+            MSG msgType=*p;
             switch (msgType){
-                case P2P_connectAsServer:
+                case MSG_connectAsServer:
                     printf("[server] Connection request P2P_connectAsServer\n");
                     serverPeers.push_back(client);
-                case P2P_connectAsPeer:
+                case MSG_connectAsPeer:
                     printf("[server] Connection request\n");
                     printf("[server] S-a conectat un peer %s %d\n", ipString, port);
                     peers.push_back(client);
                     sock_size = sizeof(client);
                     memset(msgBuffer, 0, sizeof(msgBuffer));
-                    msgType = P2P_connectedOK;
+                    msgType = MSG_connectedOK;
                     memcpy(msgBuffer, &msgType, sizeof(msgType));
                     sendto(sds[udpsd], msgBuffer, sizeof(msgBuffer), 0, (sockaddr*)&client, sock_size);
                     ///inainte de push verificam sa nu fie in lista (nu e deja peer)
                     printf("[server] Numar total de conexiuni: %lu\n", peers.size());
                     break;
-                case P2P_pong:
+                case MSG_pong:
                     for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
                         if (!memcmp(&it->address, &client, sizeof(it->address))){
                             ///client a raspuns la ping
@@ -143,7 +137,7 @@ int Server::listen(vector< pair<action, string> > &commands, int timeOut){
                         }
                     }
                     break;
-                case P2P_search:
+                case MSG_search:
                     break;
                 default:
                     printf("[server] Wrong option\n");

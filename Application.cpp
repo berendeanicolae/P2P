@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstring>
 #define PORT 39085
-//#define IP "85.122.23.145"
 #define IP "127.0.0.1"
 
 string intToString(int value){
@@ -61,7 +60,7 @@ Application::Application(): quit(0), state(0){
     ticksSinceOffline = getTicks();
     connectTimeout = 3;
     string ipPort = string(IP)+" "+intToString(PORT);
-    requests.push_back(make_pair(P2P_connectAsPeer, ipPort));
+    requests.push_back(make_pair(MSG_connectAsPeer, ipPort));
 
     //process initial connect request
 	server.sin_family = AF_INET;
@@ -84,22 +83,26 @@ void Application::process(){
     char msg[100]={};
 
     for (unsigned i=0; i<requests.size(); ++i){
-        action type=requests[i].first;
+        MSG type=requests[i].first;
         memset(msg, 0, sizeof(msg));
 
         switch (type){
-            case P2P_connectAsPeer:
-            case P2P_connectAsServer:
+            case MSG_connectAsPeer:
+            case MSG_connectAsServer:
                 memcpy(msg, &type, sizeof(type));
                 memcpy(msg+sizeof(type), requests[i].second.c_str(), requests[i].second.size());
                 sendto(sds[udpsd], msg, sizeof(msg), 0, (sockaddr*)&server, sock_size);
                 break;
-            case P2P_connectedOK:
+            case MSG_connectedOK:
                 connected = 1;
                 printf("[app] Aplicatia s-a conectat cu succes\n");
                 break;
-            case P2P_quit:
+            case MSG_quit:
                 quit = 1;
+                break;
+            case MSG_searchNoIP:
+                break;
+            case MSG_search:
                 break;
             default:
                 //wrong code
