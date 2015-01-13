@@ -6,7 +6,7 @@ Client::Client(const int *sds, const unsigned short *pts): State(sds, pts) {}
 
 void Client::ping() {printf("not implemented");}
 
-int Client::listen(vector< pair<MSG, string> > &commands, int timeOut){
+int Client::listen(vector<Message> &commands, int timeOut){
     fd_set readfds, writefds, errorfds;
     timeval timeout;
     sockaddr_in client = {};
@@ -27,18 +27,16 @@ int Client::listen(vector< pair<MSG, string> > &commands, int timeOut){
     */
     //verificam separat stdin, stdout, stderr
     if (FD_ISSET(0, &readfds)){
+        Message msg;
         memset(msgBuffer, 0, sizeof(msgBuffer));
         if (read(0, msgBuffer, sizeof(msgBuffer))<=0){
             perror("[server] Eroare la citirea de la tastatura");
         }
         string input = msgBuffer;
 		input.erase(input.end()-1, input.end()); //stergem caracterul linie noua
-        //input.pop_back(); //stergem caracterul linie noua
-        if (input == "quit"){
-            commands.push_back(make_pair(MSG_quit, ""));
-        }
-        else if (input == "exit"){
-            commands.push_back(make_pair(MSG_quit, ""));
+        if (input == "quit" || input == "exit"){
+            msg.push_back(MSG_quit);
+            commands.push_back(msg);
         }
         else{
         }
@@ -63,7 +61,7 @@ int Client::listen(vector< pair<MSG, string> > &commands, int timeOut){
             msg.pop_front(msgType);
             switch (msgType){
                 default:
-                    commands.push_back(make_pair(msgType, msgBuffer+4));
+                    commands.push_back(msg);
                     break;
                 case MSG_ping:
                     inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
@@ -83,6 +81,12 @@ int Client::listen(vector< pair<MSG, string> > &commands, int timeOut){
                     msg.pop_front(&exp);
                     uuids[uuid] = getTicks();
                     printf("[client] Search %s uuid %s\n", exp, uuid);
+                    msg.clear();
+                    msg.push_back(MSG_search);
+                    msg.push_back(40, uuid);
+                    msg.push_back(strlen(ipString), ipString);
+                    msg.push_back(strlen(exp), exp);
+                    commands.push_back(msg);
                     delete[] uuid;
                     delete[] exp;
                     break;

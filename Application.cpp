@@ -59,8 +59,11 @@ Application::Application(): quit(0), state(0), root(0){
     connected = 0;
     ticksSinceOffline = getTicks();
     connectTimeout = 3;
-    string ipPort = string(IP)+" "+intToString(PORT);
-    requests.push_back(make_pair(MSG_connectAsPeer, ipPort));
+    Message msg;
+    msg.push_back(MSG_connectAsPeer);
+    msg.push_back(strlen(IP), IP);
+    msg.push_back(strlen(intToString(PORT).c_str()), intToString(PORT).c_str());
+    requests.push_back(msg);
 
     //process initial connect request
 	server.sin_family = AF_INET;
@@ -83,18 +86,18 @@ Application::~Application(){
 
 void Application::process(){
     socklen_t sock_size = sizeof(server);
-    char msg[100]={};
 
     for (unsigned i=0; i<requests.size(); ++i){
-        MSG type=requests[i].first;
-        memset(msg, 0, sizeof(msg));
+        MSG msgType;
+        Message msg;
+        requests[i].pop_front(msgType);
 
-        switch (type){
+        switch (msgType){
             case MSG_connectAsPeer:
             case MSG_connectAsServer:
-                memcpy(msg, &type, sizeof(type));
-                memcpy(msg+sizeof(type), requests[i].second.c_str(), requests[i].second.size());
-                sendto(sds[udpsd], msg, sizeof(msg), 0, (sockaddr*)&server, sock_size);
+                msg.clear();
+                msg.push_back(msgType);
+                sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&server, sock_size);
                 break;
             case MSG_connectedOK:
                 connected = 1;

@@ -32,7 +32,7 @@ class Application{
         sockaddr_in server;
     private:
         State *state;
-        vector< pair<MSG, string> > requests;
+        vector<Message> requests;
         const char *shared;
         FileDir *root;
 

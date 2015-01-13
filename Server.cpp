@@ -36,7 +36,7 @@ void Server::ping(){
     }
 }
 
-int Server::listen(vector< pair<MSG, string> > &commands, int timeOut){
+int Server::listen(vector<Message> &commands, int timeOut){
     fd_set readfds, writefds, errorfds; //multimile de descriptori de citire, scriere si eroare
     timeval timeout;
     sockaddr_in client = {};
@@ -57,6 +57,7 @@ int Server::listen(vector< pair<MSG, string> > &commands, int timeOut){
     */
     //verificam separat stdin, stdout, stderr
     if (FD_ISSET(0, &readfds)){
+        Message msg;
         memset(msgBuffer, 0, sizeof(msgBuffer));
         if (read(0, msgBuffer, sizeof(msgBuffer))<=0){
             perror("[server] Eroare la citirea de la tastatura");
@@ -64,11 +65,9 @@ int Server::listen(vector< pair<MSG, string> > &commands, int timeOut){
         string input = msgBuffer;
 		input.erase(input.end()-1, input.end());
         //input.pop_back(); //stergem caracterul linie noua
-        if (input == "quit"){
-            commands.push_back(make_pair(MSG_quit, ""));
-        }
-        else if (input == "exit"){
-            commands.push_back(make_pair(MSG_quit, ""));
+        if (input == "quit" || input == "exit"){
+            msg.push_back(MSG_quit);
+            commands.push_back(msg);
         }
         else if (!input.compare(0, strlen("search"), "search")){
             const char *uuid = getUUID();
@@ -83,8 +82,7 @@ int Server::listen(vector< pair<MSG, string> > &commands, int timeOut){
             getsockname(sds[tcpsd], (sockaddr*)&tcpserver, &sz);///poate nu avem nevoie. vrem sa punem
             //trimit la toti peeri mesajul
             for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
-                Message msg;
-
+                msg.clear();
                 msg.push_back(MSG_searchNoIP);
                 msg.push_back(40, uuid);
                 msg.push_back(input.size(), input.c_str());

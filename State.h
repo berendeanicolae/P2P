@@ -25,7 +25,7 @@ class State{
     public:
         State(const int* sds_, const unsigned short *pts_);
         virtual ~State();
-        virtual int listen(vector< pair<MSG, string> > &commands, int timeOut=100)=0;
+        virtual int listen(vector<Message> &commands, int timeOut=100)=0;
 	protected:
 		virtual void ping()=0;
 		const char* getUUID();

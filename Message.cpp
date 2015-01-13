@@ -16,6 +16,16 @@ Message::Message(unsigned size, char *src): capacity(nextPow2(size)), front(0), 
     end += size;
 }
 
+Message::Message(const Message& other): buffer(0), capacity(other.capacity), front(other.front), end(other.end){
+    buffer = new unsigned char[capacity];
+    memcpy(buffer, other.buffer, end);
+}
+
+Message::Message(Message& other): buffer(0), capacity(other.capacity), front(other.front), end(other.end){
+    buffer = new unsigned char[capacity];
+    memcpy(buffer, other.buffer, end);
+}
+
 void Message::push_back(MSG msg){
     if (!buffer){
         capacity = sizeof(msg);

@@ -22,6 +22,8 @@ private:
 public:
     Message(): buffer(0), capacity(0), front(0), end(0) {}
     Message(unsigned size, char *src);
+    Message(const Message& other);
+    Message(Message& other);
     ~Message() {if (buffer) delete[] buffer;}
 
     void push_back(MSG msg);
