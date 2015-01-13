@@ -51,14 +51,16 @@ int Client::listen(vector< pair<MSG, string> > &commands, int timeOut){
         if (FD_ISSET(d, &readfds)){// && d!=sd){
             MSG msgType;
             char ipString[40];
-            int port;
+            int port, size;
 
             printf("[client] Am primit mesaj\n");
             socklen_t sock_size = sizeof(client);
-            recvfrom(d, msgBuffer, 100, 0, (sockaddr*)&client, &sock_size);
-            MSG *Paction=(MSG*)msgBuffer;
-            Message msg; //to do. read msg
-            msgType = *Paction;
+            if ((size=recvfrom(d, msgBuffer, 100, 0, (sockaddr*)&client, &sock_size))<=0){
+                printf("[client] S-a inchis");
+                continue;
+            }
+            Message msg(size, msgBuffer);
+            msg.pop_front(msgType);
             switch (msgType){
                 default:
                     commands.push_back(make_pair(msgType, msgBuffer+4));
@@ -75,15 +77,13 @@ int Client::listen(vector< pair<MSG, string> > &commands, int timeOut){
                 case MSG_searchNoIP:{
                     inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
                     port = client.sin_port;
-                    string uuid(msgBuffer+sizeof(msgType), msgBuffer+sizeof(msgType)+40);
-                    char *exp=0;
-                    int expSZ;
-                    memcpy(&expSZ, msgBuffer+sizeof(msgType)+40, sizeof(expSZ));
-                    exp = new char[expSZ+1];
-                    exp[expSZ] = 0;
-                    memcpy(exp, msgBuffer+sizeof(msgType)+40+sizeof(expSZ), expSZ);
+                    char *uuid=0, *exp=0;
+
+                    msg.pop_front(&uuid);
+                    msg.pop_front(&exp);
                     uuids[uuid] = getTicks();
-                    printf("[client] Search %s uuid %s\n", exp, uuid.c_str());
+                    printf("[client] Search %s uuid %s\n", exp, uuid);
+                    delete[] uuid;
                     delete[] exp;
                     break;
                 }
