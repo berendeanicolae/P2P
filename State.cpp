@@ -12,7 +12,10 @@ State::State(const int* sds_, const unsigned short *pts_): uuidLifetime(30){
 State::~State() {}
 
 int State::getIP(){
-    return 0; ///to be implemented in the future if necesary
+    sockaddr_in server;
+    socklen_t size = sizeof(server);
+    getsockname(sds[tcpsd], (sockaddr*)&server, &size);
+    return server.sin_addr.s_addr;
 }
 
 void State::stringStrip(string& str){

@@ -29,6 +29,7 @@ class State{
 	protected:
 		virtual void ping()=0;
 		const char* getUUID();
+		virtual int getIP();
 		char msgBuffer[100];
 		map<string, int> uuids; ///perechi (hash, moment primire)
 		void cleanUUIDs();
@@ -36,8 +37,6 @@ class State{
 
 		int sds[sdmaxvalue];
 		unsigned short pts[portmaxvalue];
-    private:
-		virtual int getIP();
     protected: //aceste functii pot fi implementate in alt cpp (nu tin de state)
         void stringStrip(string& str);
 };

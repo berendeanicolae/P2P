@@ -20,6 +20,7 @@ string intToString(int value){
 
 Application::Application(): quit(0), state(0), root(0){
     struct passwd *pw;
+    socklen_t size=sizeof(server);
     if ( !(pw=getpwuid(getuid())) ){
         perror("Eroare la getpwuid(getuid())");
         return;
@@ -38,7 +39,11 @@ Application::Application(): quit(0), state(0), root(0){
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(0);
-	bind(sds[udpsd], (sockaddr*)&server, sizeof(server));
+	if (bind(sds[udpsd], (sockaddr*)&server, sizeof(server))<0){
+	    perror("Eroare la UDP bind()");
+	}
+	getsockname(sds[udpsd], (sockaddr*)&server, &size);
+	printf("UDP port: %d\n", htons(server.sin_port));
 	getsockname(sds[udpsd], (sockaddr*)&server, &sz);
 	pts[udpport] = server.sin_port;
 
@@ -50,7 +55,11 @@ Application::Application(): quit(0), state(0), root(0){
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(0);
-	bind(sds[tcpsd], (sockaddr*)&server, sizeof(server));
+	if (bind(sds[tcpsd], (sockaddr*)&server, sizeof(server))<0){
+	    perror("Eroare la TCP bind()");
+	}
+	getsockname(sds[tcpsd], (sockaddr*)&server, &size);
+	printf("TCP port: %d\n", htons(server.sin_port));
 	listen(sds[tcpsd], 5);
 	getsockname(sds[tcpsd], (sockaddr*)&server, &sz);
 	pts[tcpport] = server.sin_port;
@@ -91,7 +100,10 @@ void Application::process(){
         MSG msgType;
         Message msg;
         FileDir *file=0;
-        char *uuid, *exp, *ipString;
+        int ip;
+        unsigned short port;
+        char *uuid, *exp;
+
         requests[i].pop_front(msgType);
 
         switch (msgType){
@@ -108,22 +120,32 @@ void Application::process(){
             case MSG_quit:
                 quit = 1;
                 break;
-            case MSG_searchNoIP:
+            case MSG_request:
                 break;
             case MSG_search:
                 requests[i].pop_front(&uuid);
-                requests[i].pop_front(&ipString);
+                requests[i].pop_front(&ip);
+                requests[i].pop_front(&port);
                 requests[i].pop_front(&exp);
-                printf("[search] Search %s %s\n", exp, uuid);
+                printf("[search] Search %s %s from %d\n", exp, uuid, ntohs(port));
                 file = root->find(exp);
                 if (file){
+                    int sd = socket(AF_INET, SOCK_STREAM, 0);
+                    sockaddr_in server={};
+                    server.sin_family = AF_INET;
+                    server.sin_addr.s_addr = ip;
+                    server.sin_port = port;
+                    if (connect(sd, (sockaddr*)&server, sizeof(server)) < 0){
+                        perror("Eroare la connect()");
+                    }
+                    ///creem un nou descriptor pe care sa il conectam cu destinatia
+                    ///creem o structura care sa memoreze informatiile despre download
                     printf("%s found\n", exp);
                 }
                 else{
                     printf("%s not found\n", exp);
                 }
                 delete[] exp;
-                delete[] ipString;
                 delete[] uuid;
                 break;
             default:

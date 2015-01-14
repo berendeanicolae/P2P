@@ -71,24 +71,6 @@ int Client::listen(vector<Message> &commands, int timeOut){
                     msg.push_back(MSG_pong);
                     sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sizeof(client));
                     break;
-                case MSG_searchNoIP:{
-                    inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
-                    port = client.sin_port;
-                    char *uuid=0, *exp=0;
-
-                    msg.pop_front(&uuid);
-                    msg.pop_front(&exp);
-                    uuids[uuid] = getTicks();
-                    msg.clear();
-                    msg.push_back(MSG_search);
-                    msg.push_back(40, uuid);
-                    msg.push_back(strlen(ipString), ipString);
-                    msg.push_back(strlen(exp), exp);
-                    commands.push_back(msg);
-                    delete[] uuid;
-                    delete[] exp;
-                    break;
-                }
             }
         }
         if (FD_ISSET(d, &writefds)){// && d!=sd){
