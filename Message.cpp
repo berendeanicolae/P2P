@@ -16,12 +16,12 @@ Message::Message(unsigned size, char *src): capacity(nextPow2(size)), front(0), 
     end += size;
 }
 
-Message::Message(const Message& other): buffer(0), capacity(other.capacity), front(other.front), end(other.end){
+Message::Message(const Message& other): buffer(0), capacity(other.capacity), front(0), end(other.end){
     buffer = new unsigned char[capacity];
     memcpy(buffer, other.buffer, end);
 }
 
-Message::Message(Message& other): buffer(0), capacity(other.capacity), front(other.front), end(other.end){
+Message::Message(Message& other): buffer(0), capacity(other.capacity), front(0), end(other.end){
     buffer = new unsigned char[capacity];
     memcpy(buffer, other.buffer, end);
 }
@@ -78,7 +78,7 @@ void Message::push_back(unsigned short size, const void *src){
 }
 
 void Message::pop_front(MSG& msg){
-    if (front+sizeof(msg)>=end){
+    if (front+sizeof(msg)>end){
         msg = MSG_invalid;
         return;
     }
@@ -113,7 +113,7 @@ unsigned short Message::pop_front(char **dst){
 unsigned short Message::getNextSize(){
     unsigned short size;
 
-    if (front+sizeof(size)>=end){
+    if (front+sizeof(size)>end){
         return 0;
     }
     memcpy(&size, &buffer[front], sizeof(size));

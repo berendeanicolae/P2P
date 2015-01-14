@@ -46,8 +46,10 @@ File::File(const char *name_){
     }
 }
 FileDir* File::find(const char *exp){
-    printf("file %s\n", name);
-    if (regex_match("", regex(exp))){
+    if (!name){
+        return 0;
+    }
+    if (regex_match(name, regex(exp))){
         return this;
     }
     return 0;
@@ -147,8 +149,6 @@ Root::Root(const char* dirName): Dir(dirName), path(0){
 }
 Root::~Root() {if (path) delete[] path;}
 FileDir* Root::find(const char *exp){
-    if (!name)
-        return 0;
     for (FileDir *p=first; p; p=p->next){
         FileDir *retValue;
         if ( (retValue=p->find(exp)) )

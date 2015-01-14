@@ -98,33 +98,38 @@ int Server::listen(vector<Message> &commands, int timeOut){
         if (FD_ISSET(d, &errorfds)){// && d!=sd){
         }
         if (FD_ISSET(d, &readfds)){// && d!=sd){
-            char ipString[40]={};
-            int port;
+            MSG msgType;
+            char ipString[40];
+            int port, size;
 
             socklen_t sock_size = sizeof(client);
-            recvfrom(d, msgBuffer, 100, 0, (sockaddr*)&client, &sock_size);
-            inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
-            port = client.sin_port;
+            if ((size=recvfrom(d, msgBuffer, 100, 0, (sockaddr*)&client, &sock_size))<=0){
+                printf("Clientul s-a inchis");
+                continue;
+            }
 
-            MSG *p = (MSG*)msgBuffer;
-            MSG msgType=*p;
+            Message msg(size, msgBuffer);
+            msg.pop_front(msgType);
             switch (msgType){
                 case MSG_connectAsServer:
                     printf("[server] Connection request P2P_connectAsServer\n");
                     serverPeers.push_back(client);
                 case MSG_connectAsPeer:
+                    inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
+                    port = client.sin_port;
                     printf("[server] Connection request\n");
                     printf("[server] S-a conectat un peer %s %d\n", ipString, port);
                     peers.push_back(client);
                     sock_size = sizeof(client);
-                    memset(msgBuffer, 0, sizeof(msgBuffer));
-                    msgType = MSG_connectedOK;
-                    memcpy(msgBuffer, &msgType, sizeof(msgType));
-                    sendto(sds[udpsd], msgBuffer, sizeof(msgBuffer), 0, (sockaddr*)&client, sock_size);
+                    msg.clear();
+                    msg.push_back(MSG_connectedOK);
+                    sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sock_size);
                     ///inainte de push verificam sa nu fie in lista (nu e deja peer)
                     printf("[server] Numar total de conexiuni: %lu\n", peers.size());
                     break;
                 case MSG_pong:
+                    inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
+                    port = client.sin_port;
                     for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
                         if (!memcmp(&it->address, &client, sizeof(it->address))){
                             ///client a raspuns la ping

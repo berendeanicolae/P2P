@@ -67,10 +67,9 @@ int Client::listen(vector<Message> &commands, int timeOut){
                     inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
                     port = client.sin_port;
                     printf("[client] Ping from %s %d\n", ipString, port);
-                    memset(&msgBuffer, 0, sizeof(msgBuffer));
-                    msgType = MSG_pong;
-                    memcpy(msgBuffer, &msgType, sizeof(msgType));
-                    sendto(sds[udpsd], msgBuffer, sizeof(msgType), 0, (sockaddr*)&client, sizeof(client));
+                    msg.clear();
+                    msg.push_back(MSG_pong);
+                    sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sizeof(client));
                     break;
                 case MSG_searchNoIP:{
                     inet_ntop(client.sin_family, &client.sin_addr.s_addr, ipString, sizeof(ipString));
@@ -80,7 +79,6 @@ int Client::listen(vector<Message> &commands, int timeOut){
                     msg.pop_front(&uuid);
                     msg.pop_front(&exp);
                     uuids[uuid] = getTicks();
-                    printf("[client] Search %s uuid %s\n", exp, uuid);
                     msg.clear();
                     msg.push_back(MSG_search);
                     msg.push_back(40, uuid);

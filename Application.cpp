@@ -90,6 +90,8 @@ void Application::process(){
     for (unsigned i=0; i<requests.size(); ++i){
         MSG msgType;
         Message msg;
+        FileDir *file=0;
+        char *uuid, *exp, *ipString;
         requests[i].pop_front(msgType);
 
         switch (msgType){
@@ -109,6 +111,20 @@ void Application::process(){
             case MSG_searchNoIP:
                 break;
             case MSG_search:
+                requests[i].pop_front(&uuid);
+                requests[i].pop_front(&ipString);
+                requests[i].pop_front(&exp);
+                printf("[search] Search %s %s\n", exp, uuid);
+                file = root->find(exp);
+                if (file){
+                    printf("%s found\n", exp);
+                }
+                else{
+                    printf("%s not found\n", exp);
+                }
+                delete[] exp;
+                delete[] ipString;
+                delete[] uuid;
                 break;
             default:
                 //wrong code
