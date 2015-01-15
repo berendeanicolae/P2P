@@ -36,7 +36,7 @@ void Server::ping(){
     }
 }
 
-int Server::listen(vector<Message> &commands, int timeOut){
+int Server::listening(vector<Message> &commands, int timeOut){
     fd_set readfds, writefds, errorfds; //multimile de descriptori de citire, scriere si eroare
     timeval timeout;
     sockaddr_in client = {};
@@ -83,6 +83,13 @@ int Server::listen(vector<Message> &commands, int timeOut){
             getsockname(sds[tcpsd], (sockaddr*)&tcpserver, &sz);///poate nu avem nevoie. vrem sa punem
             //trimit la toti peeri mesajul
             for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
+                int sd = socket(AF_INET, SOCK_STREAM, 0); //socketul folosit pentru a comunica cu peers ce au fisierul
+                sockaddr_in server={};
+                server.sin_family = AF_INET;
+                server.sin_addr.s_addr = inet_addr(INADDR_ANY);
+                bind(sd, (sockaddr*)&server, sizeof(server));
+                listen(sd, 5);
+                server.sin_port = htons(0);
                 int ip=getIP();
                 msg.clear();
                 msg.push_back(MSG_search);

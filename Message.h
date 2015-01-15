@@ -12,7 +12,8 @@ enum MSG{
     MSG_request,
     MSG_have,
     MSG_struct,
-    MSG_getstruct,
+    MSG_getstruct, //get directory tree of file
+    MSG_getfile, //get file (must contain relative path to file and file offset/
     MSG_invalid
 };
 

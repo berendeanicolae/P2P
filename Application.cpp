@@ -146,7 +146,7 @@ void Application::process(){
                     msg.push_back(strlen(uuid), uuid);
                     write(sd, msg.getPSize(), sizeof(msg.getPSize()));
                     write(sd, msg.getMessage(), msg.getSize());
-                    //write(sd, msg.c_str(), msg.size());
+                    //downloads[uuid] = sd;
                     ///creem o structura care sa memoreze informatiile despre download
                     printf("%s found\n", exp);
                 }
@@ -158,18 +158,20 @@ void Application::process(){
                 break;
             case MSG_getstruct:
                 requests[i].pop_front(uuid);
-                if (downloads.count(uuid)){
-                    int sd = downloads[uuid];
+                if (1){//downloads.count(uuid)){
+                    //int sd = downloads[uuid];
                     string dirStructure;
 
                     msg.clear();
                     root->getStructure(dirStructure);
                     msg.push_back(MSG_struct);
                     msg.push_back(dirStructure.size(), dirStructure.c_str());
-                    write(sd, msg.getPSize(), sizeof(msg.getPSize()));
-                    write(sd, msg.getMessage(), msg.getSize());
+                    //write(sd, msg.getPSize(), sizeof(msg.getPSize()));
+                    //write(sd, msg.getMessage(), msg.getSize());
                     break;
                 }
+            case MSG_getfile:
+                break;
             default:
                 //wrong code
                 break;
@@ -218,7 +220,7 @@ void Application::checkIfConnected(){
 void Application::run(){
     while (!quit){
         if (state)
-            state->listen(requests);
+            state->listening(requests);
         process();
         checkIfConnected();
         static int startTime=getTicks();

@@ -6,7 +6,7 @@ Client::Client(const int *sds, const unsigned short *pts): State(sds, pts) {}
 
 void Client::ping() {printf("not implemented");}
 
-int Client::listen(vector<Message> &commands, int timeOut){
+int Client::listening(vector<Message> &commands, int timeOut){
     fd_set readfds, writefds, errorfds;
     timeval timeout;
     sockaddr_in client = {};

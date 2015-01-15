@@ -38,14 +38,6 @@ void State::cleanUUIDs(){
     }
 }
 
-static char intToHex(char digit){
-    if (digit<10)
-        return '0'+digit;
-    if (digit<16)
-        return 'a'+digit-10;
-    return -1;
-}
-
 const char *State::getUUID(){
     static unsigned char in[20], out[20]; ///2*long+short=18. Poate pe viitor trebuie marit
     long ip=getIP(), timestamp=getTicks();
@@ -62,10 +54,7 @@ const char *State::getUUID(){
     offset += sizeof(timestamp);
 
     sha1::calc(in, offset, out);
-    for (unsigned i=0; i<sizeof(out); ++i){
-        result[2*i] = intToHex(out[i]&15);
-        result[2*i+1] = intToHex((out[i]&(15<<4))>>4);
-    }
+    sha1::toHexString(out, result);
     //combinatie intre IP, port, ticks (sha1)
     return result;
 }
