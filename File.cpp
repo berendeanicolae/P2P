@@ -54,6 +54,12 @@ FileDir* File::find(const char *exp){
     }
     return 0;
 }
+void File::getStructure(string &strct){
+    strct += "{";
+    if (name)
+        strct += name;
+    strct += "}";
+}
 
 Dir::Dir(const char *dirName): first(0){
     ///verifica lungimea maxima a cailor
@@ -126,6 +132,16 @@ FileDir* Dir::find(regex& exp){
             return retValue;
     }
     return 0;
+}
+void Dir::getStructure(string &strct){
+    strct += "{";
+    if (name)
+        strct += name;
+    strct += ":[";
+    for (FileDir *p=first; p; p=p->next){
+        p->getStructure(strct);
+    }
+    strct += "]}";
 }
 
 Root::Root(const char* dirName): Dir(dirName), path(0){

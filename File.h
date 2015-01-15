@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <regex>
+#include <string>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -25,6 +26,7 @@ class FileDir{
     public:
         virtual FileDir* find(const char *exp) = 0;
 	    virtual ~FileDir();
+	    virtual void getStructure(string &strct) = 0;
 };
 
 class File: public FileDir{
@@ -34,6 +36,7 @@ class File: public FileDir{
 	    virtual ~File() {}
     public:
         virtual FileDir* find(const char *exp);
+	    virtual void getStructure(string &strct);
 };
 
 class Dir: public FileDir{
@@ -45,6 +48,7 @@ class Dir: public FileDir{
         virtual FileDir* find(regex& exp);
     public:
         virtual FileDir* find(const char *exp);
+	    virtual void getStructure(string &strct);
 };
 
 class Root: public Dir{

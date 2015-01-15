@@ -28,6 +28,7 @@ Application::Application(): quit(0), state(0), root(0){
     //inirtializam directorul shared
     shared = pw->pw_dir;
     root = new Root(shared);
+    string strct;
 
     socklen_t sz=sizeof(server);
     sds[nfds] = 2;
@@ -138,7 +139,6 @@ void Application::process(){
                     if (connect(sd, (sockaddr*)&server, sizeof(server)) < 0){
                         perror("Eroare la connect()");
                     }
-                    ///creem un nou descriptor pe care sa il conectam cu destinatia
                     ///creem o structura care sa memoreze informatiile despre download
                     printf("%s found\n", exp);
                 }

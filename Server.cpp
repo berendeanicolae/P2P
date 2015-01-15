@@ -159,7 +159,14 @@ int Server::listen(vector<Message> &commands, int timeOut){
             else if (d==sds[tcpsd]){
                 sockaddr_in client;
                 socklen_t size;
-                accept(sds[tcpsd], (sockaddr*)&client, &size);
+                int sd;
+
+                if ((sd=accept(sds[tcpsd], (sockaddr*)&client, &size)) < 0){
+                    perror("Eroare la accept()");
+                    continue;
+                }
+                //for (
+                ///verific daca clientul e conectat
             }
             else{
             }
