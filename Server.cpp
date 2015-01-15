@@ -165,8 +165,6 @@ int Server::listen(vector<Message> &commands, int timeOut){
                     perror("Eroare la accept()");
                     continue;
                 }
-                //for (
-                ///verific daca clientul e conectat
             }
             else{
             }

@@ -40,7 +40,7 @@ File::File(const char *name_){
 
     len = strlen(name_);
     if (len){
-        name = new char[len+1]; //len+null
+        name = new char[len+1];
         strcpy(name, name_);
         name[len] = 0;
     }

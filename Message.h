@@ -10,6 +10,9 @@ enum MSG{
     MSG_pong,
     MSG_search,
     MSG_request,
+    MSG_have,
+    MSG_struct,
+    MSG_getstruct,
     MSG_invalid
 };
 
@@ -35,6 +38,7 @@ public:
     const unsigned char *getMessage() {return buffer;}
     unsigned short getNextSize(); //returneaza valoarea corecta doar cand nu urmeaza un MSG
     unsigned getSize() {return end;}
+    const unsigned *getPSize() {return &end;}
     void clear();
 };
 

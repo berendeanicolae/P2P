@@ -33,6 +33,7 @@ class Application{
     private:
         State *state;
         vector<Message> requests;
+        map<string, int> downloads;
         const char *shared;
         FileDir *root;
 
