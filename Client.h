@@ -5,7 +5,7 @@
 
 class Client : public State{
     public:
-        Client(const int *sds, const unsigned short *pts);
+        Client(int udpsd, int nfds);
         int listening(vector<Message> &commands, int timeOut);
     private:
         sockaddr_in server;

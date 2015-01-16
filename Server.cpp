@@ -2,7 +2,7 @@
 #include "network.h"
 #include <cstring>
 
-Server::Server(const int *sds, const unsigned short *pts): State(sds, pts), pingAfter(10), pingTimeout(20), maxPingTries(3), betweenPings(1){
+Server::Server(int udpsd, int nfds): State(udpsd, nfds), pingAfter(10), pingTimeout(20), maxPingTries(3), betweenPings(1){
 }
 
 void Server::ping(){
@@ -16,7 +16,7 @@ void Server::ping(){
                     memset(msgBuffer, 0, sizeof(msgBuffer));
                     MSG msgType = MSG_ping;
                     memcpy(msgBuffer, &msgType, sizeof(msgType));
-                    sendto(sds[udpsd], msgBuffer, sizeof(msgBuffer), 0, (sockaddr*)&it->address, sizeof(it->address));
+                    sendto(udpsd, msgBuffer, sizeof(msgBuffer), 0, (sockaddr*)&it->address, sizeof(it->address));
                     inet_ntop(it->address.sin_family, &it->address.sin_addr.s_addr, ipString, sizeof(ipString));
                     printf("[server] Ping %s %d\n", ipString, port);
                     ++it->tries;
@@ -44,12 +44,11 @@ int Server::listening(vector<Message> &commands, int timeOut){
     //creem multimile de descriptori
     FD_ZERO(&readfds);FD_ZERO(&writefds);FD_ZERO(&errorfds);
     FD_SET(0, &readfds); //includem tastatura in readfds
-    FD_SET(sds[udpsd], &readfds);
-    FD_SET(sds[tcpsd], &readfds);
+    FD_SET(udpsd, &readfds);
 
     timeout.tv_sec = timeOut/1000;
     timeout.tv_usec = timeOut%1000;
-    select(sds[nfds]+1, &readfds, &writefds, &errorfds, &timeout);
+    select(nfds+1, &readfds, &writefds, &errorfds, &timeout);
 
     cleanUUIDs();
 
@@ -72,49 +71,47 @@ int Server::listening(vector<Message> &commands, int timeOut){
         }
         else if (!input.compare(0, strlen("search"), "search")){
             const char *uuid = getUUID();
-            sockaddr_in tcpserver = {};
-            socklen_t sz = sizeof(tcpserver);
+            int sd = socket(AF_INET, SOCK_STREAM, 0); //socketul folosit pentru a comunica cu peers ce au fisierul
+            sockaddr_in server={};
+            server.sin_family = AF_INET;
+            server.sin_addr.s_addr = htonl(INADDR_ANY);
+            server.sin_port = htons(0);
+            bind(sd, (sockaddr*)&server, sizeof(server));
+            listen(sd, 5);
+            //sockaddr_in tcpserver = {};
+            //socklen_t sz = sizeof(tcpserver);
 
             //calculam expresia regulata
             input.erase(input.begin(), input.begin()+strlen("search"));
             stringStrip(input);
             printf("[Search] %s %s\n", input.c_str(), uuid);
             uuids[uuid] = getTicks();
-            getsockname(sds[tcpsd], (sockaddr*)&tcpserver, &sz);///poate nu avem nevoie. vrem sa punem
+            comm.push_back(MSG_request);
+            comm.push_back(sizeof(sd), &sd);
+            commands.push_back(comm);
             //trimit la toti peeri mesajul
             for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
-                int sd = socket(AF_INET, SOCK_STREAM, 0); //socketul folosit pentru a comunica cu peers ce au fisierul
-                sockaddr_in server={};
-                server.sin_family = AF_INET;
-                server.sin_addr.s_addr = inet_addr(INADDR_ANY);
-                bind(sd, (sockaddr*)&server, sizeof(server));
-                listen(sd, 5);
-                server.sin_port = htons(0);
-                int ip=getIP();
+                int ip=getIP(sd);
+                unsigned short port=getPort(sd);
+
                 msg.clear();
                 msg.push_back(MSG_search);
-                comm.push_back(MSG_request);
                 msg.push_back(40, uuid);
-                comm.push_back(40, uuid);
                 msg.push_back(sizeof(ip), &ip);
-                comm.push_back(sizeof(ip), &ip);
-                msg.push_back(sizeof(pts[tcpport]), &pts[tcpport]);
-                comm.push_back(sizeof(pts[tcpport]), &pts[tcpport]);
+                msg.push_back(sizeof(port), &port);
                 msg.push_back(input.size(), input.c_str());
-                comm.push_back(input.size(), input.c_str());
-                commands.push_back(comm);
 
-                sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&it->address, sizeof(it->address));
+                sendto(udpsd, msg.getMessage(), msg.getSize(), 0, (sockaddr*)&it->address, sizeof(it->address));
             }
         }
         else{
         }
     }
-    for (int d=3; d<=sds[nfds]; ++d){
+    for (int d=3; d<=nfds; ++d){
         if (FD_ISSET(d, &errorfds)){
         }
         if (FD_ISSET(d, &readfds)){
-            if (d==sds[udpsd]){
+            if (d==udpsd){
                 MSG msgType;
                 char ipString[40];
                 int port, size;
@@ -140,7 +137,7 @@ int Server::listening(vector<Message> &commands, int timeOut){
                         sock_size = sizeof(client);
                         msg.clear();
                         msg.push_back(MSG_connectedOK);
-                        sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sock_size);
+                        sendto(udpsd, msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sock_size);
                         ///inainte de push verificam sa nu fie in lista (nu e deja peer)
                         printf("[server] Numar total de conexiuni: %lu\n", peers.size());
                         break;
@@ -161,16 +158,6 @@ int Server::listening(vector<Message> &commands, int timeOut){
                         break;
                     default:
                         printf("[server] Wrong option\n");
-                }
-            }
-            else if (d==sds[tcpsd]){
-                sockaddr_in client;
-                socklen_t size;
-                int sd;
-
-                if ((sd=accept(sds[tcpsd], (sockaddr*)&client, &size)) < 0){
-                    perror("Eroare la accept()");
-                    continue;
                 }
             }
             else{

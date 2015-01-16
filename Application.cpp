@@ -5,6 +5,9 @@
 #define PORT 39085
 #define IP "127.0.0.1"
 
+bool Application::connected = 0;
+bool Application::quit = 0;
+
 string intToString(int value){
     string str;
 
@@ -18,7 +21,7 @@ string intToString(int value){
     return str;
 }
 
-Application::Application(): quit(0), state(0), root(0){
+Application::Application(): state(0), root(0){
     struct passwd *pw;
     socklen_t size=sizeof(server);
     if ( !(pw=getpwuid(getuid())) ){
@@ -28,42 +31,21 @@ Application::Application(): quit(0), state(0), root(0){
     //inirtializam directorul shared
     shared = pw->pw_dir;
     root = new Root(shared);
-    string strct;
 
-    socklen_t sz=sizeof(server);
-    sds[nfds] = 2;
+    nfds = 2;
     //create socket UDP
-	if ( (sds[udpsd]=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
+	if ( (udpsd=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
 		perror("Eroare la creare socket UDP");
 	}
-	sds[nfds] = max(sds[nfds], sds[udpsd]);
+	nfds = max(nfds, udpsd);
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(0);
-	if (bind(sds[udpsd], (sockaddr*)&server, sizeof(server))<0){
+	if (bind(udpsd, (sockaddr*)&server, sizeof(server))<0){
 	    perror("Eroare la UDP bind()");
 	}
-	getsockname(sds[udpsd], (sockaddr*)&server, &size);
+	getsockname(udpsd, (sockaddr*)&server, &size);
 	printf("UDP port: %d\n", htons(server.sin_port));
-	getsockname(sds[udpsd], (sockaddr*)&server, &sz);
-	pts[udpport] = server.sin_port;
-
-    //create socket TCP
-	if ( (sds[tcpsd]=socket(AF_INET, SOCK_STREAM, 0)) == -1){
-	    perror("Eroare la creare socket TCP");
-	}
-	sds[nfds] = max(sds[nfds], sds[tcpsd]);
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = htonl(INADDR_ANY);
-    server.sin_port = htons(0);
-	if (bind(sds[tcpsd], (sockaddr*)&server, sizeof(server))<0){
-	    perror("Eroare la TCP bind()");
-	}
-	getsockname(sds[tcpsd], (sockaddr*)&server, &size);
-	printf("TCP port: %d\n", htons(server.sin_port));
-	listen(sds[tcpsd], 5);
-	getsockname(sds[tcpsd], (sockaddr*)&server, &sz);
-	pts[tcpport] = server.sin_port;
 
     //initial connect request
     connected = 0;
@@ -79,7 +61,7 @@ Application::Application(): quit(0), state(0), root(0){
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr(IP);
     server.sin_port = htons(PORT);
-    state = new Client(sds, pts);
+    state = new Client(udpsd, nfds);
     process();
 }
 
@@ -90,8 +72,29 @@ Application::~Application(){
     if (root){
         delete root;
     }
-    close(sds[udpsd]);
-    close(sds[tcpsd]);
+    close(udpsd);
+}
+
+void* Application::download(void *p){
+    fd_set readfds;
+    int sd = *(int*)p;
+    int lastResponse = getTicks();
+
+    printf("Thread started\n");
+    pthread_detach(pthread_self());
+    while (!quit && getTicks()-lastResponse<10){
+        FD_SET(sd, &readfds);
+    }
+    printf("Thread exited\n");
+    pthread_exit(0);
+    return 0;
+}
+
+void* Application::upload(void *){
+    pthread_detach(pthread_self());
+    printf("Thread upload\n");
+    pthread_exit(0);
+    return 0;
 }
 
 void Application::process(){
@@ -104,6 +107,8 @@ void Application::process(){
         int ip;
         unsigned short port;
         char *uuid, *exp;
+        int sd;
+        pthread_t th;
 
         requests[i].pop_front(msgType);
 
@@ -112,7 +117,7 @@ void Application::process(){
             case MSG_connectAsServer:
                 msg.clear();
                 msg.push_back(msgType);
-                sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&server, sock_size);
+                sendto(udpsd, msg.getMessage(), msg.getSize(), 0, (sockaddr*)&server, sock_size);
                 break;
             case MSG_connectedOK:
                 connected = 1;
@@ -122,6 +127,9 @@ void Application::process(){
                 quit = 1;
                 break;
             case MSG_request:
+                msg.pop_front(&sd);
+                pthread_create(&th, 0, Application::download, &sd);
+                //pornesc un dowload
                 break;
             case MSG_search:
                 requests[i].pop_front(&uuid);
@@ -140,37 +148,35 @@ void Application::process(){
                         perror("Eroare la connect()");
                         continue;
                     }
-
+                    Message *comm = new Message;
+                    comm->push_back(sizeof(sd), &sd);
+                    comm->push_back(sizeof(file), file);
+                    delete comm; //to be removed after thread creadte
+                    /*
+                        pornim un thread care sa trimita date
+                    //ne conectam la server si ii trimitem un mesaj MSG_have
+                    int sd = socket(AF_INET, SOCK_STREAM, 0);
+                    sockaddr_in server={};
+                    server.sin_family = AF_INET;
+                    server.sin_addr.s_addr = ip;
+                    server.sin_port = port;
+                    if (connect(sd, (sockaddr*)&server, sizeof(server)) < 0){
+                        perror("Eroare la connect()");
+                        continue;
+                    }
                     msg.clear();
                     msg.push_back(MSG_have);
-                    msg.push_back(strlen(uuid), uuid);
                     write(sd, msg.getPSize(), sizeof(msg.getPSize()));
                     write(sd, msg.getMessage(), msg.getSize());
-                    //downloads[uuid] = sd;
-                    ///creem o structura care sa memoreze informatiile despre download
+                    ///pornim un thread de unde sa ascultam portul
                     printf("%s found\n", exp);
+                    */
                 }
                 else{
                     printf("%s not found\n", exp);
                 }
                 delete[] exp;
                 delete[] uuid;
-                break;
-            case MSG_getstruct:
-                requests[i].pop_front(uuid);
-                if (1){//downloads.count(uuid)){
-                    //int sd = downloads[uuid];
-                    string dirStructure;
-
-                    msg.clear();
-                    root->getStructure(dirStructure);
-                    msg.push_back(MSG_struct);
-                    msg.push_back(dirStructure.size(), dirStructure.c_str());
-                    //write(sd, msg.getPSize(), sizeof(msg.getPSize()));
-                    //write(sd, msg.getMessage(), msg.getSize());
-                    break;
-                }
-            case MSG_getfile:
                 break;
             default:
                 //wrong code
@@ -189,8 +195,8 @@ void Application::checkIfConnected(){
             // optiunea de reutilizare a adresei pentru socket
             int opt;
 
-            close(sds[udpsd]); //creem un nou socket si il atasam adresei dorite
-            if ( (sds[udpsd]=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
+            close(udpsd); //creem un nou socket si il atasam adresei dorite
+            if ( (udpsd=socket(AF_INET, SOCK_DGRAM, 0)) == -1 ){
                 perror("Eroare la creare socket");
             }
 
@@ -201,16 +207,16 @@ void Application::checkIfConnected(){
 
             opt = 1;
             // setez optiunea de a reutiliza portul
-            setsockopt(sds[udpsd], SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
+            setsockopt(udpsd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
             // atasez socketul
-            if (bind(sds[udpsd], (sockaddr*)&server, sizeof(sockaddr))==-1){
+            if (bind(udpsd, (sockaddr*)&server, sizeof(sockaddr))==-1){
                 perror("[server]Eroare la bind()");
                 quit = 1;
                 return;
             }
             // schimb state din client in server
             delete state;
-            state = new Server(sds, pts);
+            state = new Server(udpsd, nfds);
             connected = 1;
             printf("Nu a fost gasit server de bootstrap.\n");
         }

@@ -15,7 +15,7 @@ class Server : public State{
             Peer(sockaddr_in address_): address(address_), lastPing(getTicks()), lastPong(getTicks()), tries(0) {}
     };
     public:
-        Server(const int *sds, const unsigned short *pts);
+        Server(int udpsd, int nfds);
         int listening(vector<Message> &commands, int timeOut);
     private:
         sockaddr_in server;

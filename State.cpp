@@ -2,20 +2,22 @@
 #include "sha1.h"
 #include <cctype> //added for stringStrip
 
-State::State(const int* sds_, const unsigned short *pts_): uuidLifetime(30){
-    sds[udpsd] = sds_[udpsd];
-    sds[tcpsd] = sds_[tcpsd];
-    sds[nfds] = sds_[nfds];
-    pts[udpport] = pts_[udpport];
-    pts[tcpport] = pts_[tcpport];
+State::State(int udpsd_, int nfds_): udpsd(udpsd_), nfds(nfds_), uuidLifetime(30){
 }
 State::~State() {}
 
-int State::getIP(){
+int State::getIP(int sd){
     sockaddr_in server;
     socklen_t size = sizeof(server);
-    getsockname(sds[tcpsd], (sockaddr*)&server, &size);
+    getsockname(sd, (sockaddr*)&server, &size);
     return server.sin_addr.s_addr;
+}
+
+unsigned short State::getPort(int sd){
+    sockaddr_in server;
+    socklen_t size = sizeof(server);
+    getsockname(sd, (sockaddr*)&server, &size);
+    return server.sin_port;
 }
 
 void State::stringStrip(string& str){
@@ -40,8 +42,8 @@ void State::cleanUUIDs(){
 
 const char *State::getUUID(){
     static unsigned char in[20], out[20]; ///2*long+short=18. Poate pe viitor trebuie marit
-    long ip=getIP(), timestamp=getTicks();
-    unsigned short port=udpport, offset=0;
+    long ip=getIP(udpsd), timestamp=getTicks();
+    unsigned short port=getPort(udpsd), offset=0;
     static char result[41]={};
 
     memset(in, 0, sizeof(in));

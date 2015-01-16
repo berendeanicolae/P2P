@@ -2,7 +2,7 @@
 #include "network.h"
 #include <cstring>
 
-Client::Client(const int *sds, const unsigned short *pts): State(sds, pts) {}
+Client::Client(int udpsd, int nfds): State(udpsd, nfds) {}
 
 void Client::ping() {printf("not implemented");}
 
@@ -14,11 +14,11 @@ int Client::listening(vector<Message> &commands, int timeOut){
     //creem multimile de descriptori
     FD_ZERO(&readfds);FD_ZERO(&writefds);FD_ZERO(&errorfds);
     FD_SET(0, &readfds);
-    FD_SET(sds[udpsd], &readfds);
+    FD_SET(udpsd, &readfds);
 
     timeout.tv_sec = timeOut/1000;
     timeout.tv_usec = timeOut%1000;
-    select(sds[nfds]+1, &readfds, &writefds, &errorfds, &timeout);
+    select(nfds+1, &readfds, &writefds, &errorfds, &timeout);
 
     cleanUUIDs();
 
@@ -41,7 +41,7 @@ int Client::listening(vector<Message> &commands, int timeOut){
         else{
         }
     }
-    for (int d=3; d<=sds[nfds]; ++d){
+    for (int d=3; d<=nfds; ++d){
         memset(msgBuffer, 0, sizeof(msgBuffer));
 
         if (FD_ISSET(d, &errorfds)){// && d!=sd){
@@ -69,7 +69,7 @@ int Client::listening(vector<Message> &commands, int timeOut){
                     printf("[client] Ping from %s %d\n", ipString, port);
                     msg.clear();
                     msg.push_back(MSG_pong);
-                    sendto(sds[udpsd], msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sizeof(client));
+                    sendto(udpsd, msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sizeof(client));
                     break;
             }
         }
