@@ -17,7 +17,7 @@ class Root;
 class FileDir{
     friend class Dir;
     friend class Root;
-	protected:
+	public: //to be changed
 		char* name;
 		FileDir *next;
 

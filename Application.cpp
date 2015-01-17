@@ -2,6 +2,7 @@
 #include <pwd.h>
 #include <algorithm>
 #include <cstring>
+#include <unistd.h>
 #define PORT 39085
 #define IP "127.0.0.1"
 
@@ -76,23 +77,136 @@ Application::~Application(){
 }
 
 void* Application::download(void *p){
-    fd_set readfds;
-    int sd = *(int*)p;
-    int lastResponse = getTicks();
+    Message *arg=(Message*)p;
+    int tcpsd, lastResponse=getTicks(), nfds;
+    vector<pair<int, int>> peers, seeders;
+    char *strct;
 
     printf("Thread started\n");
     pthread_detach(pthread_self());
+
+    arg->pop_front(&tcpsd);
+    delete arg;
+    nfds = tcpsd;
+
     while (!quit && getTicks()-lastResponse<10){
-        FD_SET(sd, &readfds);
+        fd_set readfds;
+        timeval timeout={1, 0};
+
+        FD_ZERO(&readfds);
+
+        FD_SET(tcpsd, &readfds);
+        for (auto it=peers.begin(); it!=peers.end(); ++it) {FD_SET(it->first, &readfds);}
+        select(nfds+1, &readfds, 0, 0, &timeout);
+        if (FD_ISSET(tcpsd, &readfds)){
+            int sd = accept(tcpsd, 0, 0);
+            lastResponse = getTicks();
+            peers.push_back(make_pair(sd, getTicks()));
+            nfds = max(nfds, sd);
+            FD_CLR(tcpsd, &readfds);
+            printf("accepted peer\n");
+        }
+        for (int d=3; d<=nfds; ++d){
+            if (FD_ISSET(d, &readfds)){
+                int size;
+
+                if (read(d, &size, sizeof(size)) <= 0){
+                    close(d);
+                    continue;
+                }
+                lastResponse = getTicks();
+                char *buffer = new char[size];
+                read(d, buffer, size);
+                Message msg(size, buffer);
+                delete[] buffer;
+                MSG msgType;
+                msg.pop_front(msgType);
+                switch (msgType){
+                    case MSG_have:
+                        seeders.push_back(make_pair(d, getTicks()));
+                        msg.clear();
+                        msg.push_back(MSG_getstruct);
+                        write(d, msg.getPSize(), sizeof(*msg.getPSize()));
+                        write(d, msg.getMessage(), msg.getSize());
+                        printf("[thread] struct requested\n");
+                        break;
+                    case MSG_struct:
+                        printf("[thread] struct received\n");
+                        msg.pop_front(&strct);
+                        printf("%s\n", strct);
+                        delete[] strct;
+                        break;
+                    default:
+                        printf("[thread] data received\n");
+                        break;
+                }
+            }
+        }
     }
+
     printf("Thread exited\n");
     pthread_exit(0);
     return 0;
 }
 
-void* Application::upload(void *){
+void* Application::upload(void *p){
+    Message *arg=(Message*)p, msg;
+    int tcpsd, lastRequest=getTicks();
+    FileDir *file;
+    int size;
+    string strct;
+
     pthread_detach(pthread_self());
     printf("Thread upload\n");
+
+    arg->pop_front(&tcpsd);
+    arg->pop_front(&file);
+    arg->clear();
+
+    arg->push_back(MSG_have);
+    if (write(tcpsd, arg->getPSize(), sizeof(*arg->getPSize())) <= 0){
+        perror("Eroare la send");
+    }
+    if (write(tcpsd, arg->getMessage(), arg->getSize()) <= 0){
+        perror("Eroare la send");
+    }
+    delete arg;
+    printf("sent data\n");
+    while (!quit && getTicks()-lastRequest<10){
+        fd_set readfds;
+        timeval timeout={1, 0};
+
+        FD_ZERO(&readfds);
+
+        FD_SET(tcpsd, &readfds);
+        select(tcpsd+1, &readfds, 0, 0, &timeout);
+        if (FD_ISSET(tcpsd, &readfds)){
+            if (read(tcpsd, &size, sizeof(size)) <= 0){
+                break; //daca a fost inchis capatul remote, terminam threadul
+            }
+            char *buffer = new char[size];
+            read(tcpsd, buffer, size);
+            Message msg(size, buffer);
+            delete[] buffer;
+            MSG msgType;
+            msg.pop_front(msgType);
+            switch (msgType){
+                default:
+                    break;
+                case MSG_getstruct:
+                    printf("[thread] struct send\n");
+                    file->getStructure(strct);
+                    msg.clear();
+                    msg.push_back(MSG_struct);
+                    msg.push_back(strct.size(), strct.c_str());
+                    write(tcpsd, msg.getPSize(), sizeof(*msg.getPSize()));
+                    write(tcpsd, msg.getMessage(), msg.getSize());
+                    break;
+            }
+        }
+    }
+
+    printf("Thread exited\n");
     pthread_exit(0);
     return 0;
 }
@@ -102,13 +216,12 @@ void Application::process(){
 
     for (unsigned i=0; i<requests.size(); ++i){
         MSG msgType;
-        Message msg;
+        Message msg, *comm;
         FileDir *file=0;
-        int ip;
+        int ip, sd;
         unsigned short port;
         char *uuid, *exp;
-        int sd;
-        pthread_t th;
+        pthread_t td;
 
         requests[i].pop_front(msgType);
 
@@ -127,8 +240,10 @@ void Application::process(){
                 quit = 1;
                 break;
             case MSG_request:
-                msg.pop_front(&sd);
-                pthread_create(&th, 0, Application::download, &sd);
+                requests[i].pop_front(&sd);
+                comm = new Message;
+                comm->push_back(sizeof(sd), &sd);
+                pthread_create(&td, 0, Application::download, comm);
                 //pornesc un dowload
                 break;
             case MSG_search:
@@ -148,29 +263,11 @@ void Application::process(){
                         perror("Eroare la connect()");
                         continue;
                     }
-                    Message *comm = new Message;
+                    comm = new Message;
                     comm->push_back(sizeof(sd), &sd);
-                    comm->push_back(sizeof(file), file);
-                    delete comm; //to be removed after thread creadte
-                    /*
-                        pornim un thread care sa trimita date
-                    //ne conectam la server si ii trimitem un mesaj MSG_have
-                    int sd = socket(AF_INET, SOCK_STREAM, 0);
-                    sockaddr_in server={};
-                    server.sin_family = AF_INET;
-                    server.sin_addr.s_addr = ip;
-                    server.sin_port = port;
-                    if (connect(sd, (sockaddr*)&server, sizeof(server)) < 0){
-                        perror("Eroare la connect()");
-                        continue;
-                    }
-                    msg.clear();
-                    msg.push_back(MSG_have);
-                    write(sd, msg.getPSize(), sizeof(msg.getPSize()));
-                    write(sd, msg.getMessage(), msg.getSize());
-                    ///pornim un thread de unde sa ascultam portul
-                    printf("%s found\n", exp);
-                    */
+                    comm->push_back(sizeof(&file), &file);
+                    printf(file->name);
+                    pthread_create(&td, 0, upload, comm);
                 }
                 else{
                     printf("%s not found\n", exp);
