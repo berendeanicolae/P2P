@@ -58,6 +58,7 @@ FileDir* FileDir::createTree(char *strct){
                 x += *rname=='{';
             }
             aux->next = file->first;
+            aux->parent = file;
             file->first = aux;
         }
         return file;
@@ -85,8 +86,11 @@ void FileDir::create(string path){
 string FileDir::getPath(){
     if (!name)
         return "";
-    if (parent)
-        return parent->getPath()+name;
+    if (parent){
+        string parentPath = parent->getPath();
+        if (parentPath.back()=='/') parentPath.pop_back();
+        return parentPath+'/'+name;
+    }
     return name;
 }
 
@@ -117,6 +121,9 @@ void File::getStructure(string &strct){
     if (name)
         strct += name;
     strct += "}";
+}
+void File::getFiles(vector<FileDir*> &files){
+    files.push_back(this);
 }
 
 Dir::Dir(const char *dirName): first(0){
@@ -215,9 +222,17 @@ void Dir::create(string path){
 string Dir::getPath(){
     if (!name)
         return "";
-    if (parent)
-        return parent->getPath()+'/'+name;
+    if (parent){
+        string parentPath = parent->getPath();
+        if (parentPath.back()=='/') parentPath.pop_back();
+        return parentPath+'/'+name;
+    }
     return name;
+}
+void Dir::getFiles(vector<FileDir*> &files){
+    for (FileDir *p=first; p; p=p->next){
+        p->getFiles(files);
+    }
 }
 
 Root::Root(const char* dirName): Dir(dirName), path(0){

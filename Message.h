@@ -13,7 +13,9 @@ enum MSG{
     MSG_have,
     MSG_struct,
     MSG_getstruct, //get directory tree of file
-    MSG_getfile, //get file (must contain relative path to file and file offset/
+    MSG_getfile,
+    MSG_filesize,
+    MSG_getfilesize,
     MSG_invalid
 };
 
@@ -35,7 +37,6 @@ public:
     void pop_front(MSG& msg);
     unsigned short pop_front(void *dst);
     unsigned short pop_front(char **dst);
-    //unsigned short pop_front(char *&dst);
     const unsigned char *getMessage() {return buffer;}
     unsigned short getNextSize(); //returneaza valoarea corecta doar cand nu urmeaza un MSG
     unsigned getSize() {return end;}

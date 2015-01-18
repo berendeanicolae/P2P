@@ -82,8 +82,12 @@ void* Application::download(void *p){
     Message *arg=(Message*)p;
     FileDir *file=0;
     int tcpsd, lastResponse=getTicks(), nfds;
-    vector<pair<int, int>> peers, seeders;
-    char *strct;
+    vector<pair<int, int>> peers;
+    vector<int> seeders;
+    vector<FileDir*> files;
+    char *strct=0;
+    unsigned size=0, robin=0;
+    vector<pair<bool, int>> downloaded;
 
     printf("Thread started\n");
     pthread_detach(pthread_self());
@@ -97,6 +101,13 @@ void* Application::download(void *p){
         timeval timeout={1, 0};
 
         FD_ZERO(&readfds);
+
+        for (unsigned i=0; i<peers.size(); ++i){
+            if (getTicks()-peers[i].second>10){
+                swap(peers[i], peers.back());
+                peers.pop_back();
+            }
+        }
 
         FD_SET(tcpsd, &readfds);
         for (auto it=peers.begin(); it!=peers.end(); ++it) {FD_SET(it->first, &readfds);}
@@ -126,7 +137,7 @@ void* Application::download(void *p){
                 msg.pop_front(msgType);
                 switch (msgType){
                     case MSG_have:
-                        seeders.push_back(make_pair(d, getTicks()));
+                        seeders.push_back(d);
                         msg.clear();
                         msg.push_back(MSG_getstruct);
                         write(d, msg.getPSize(), sizeof(*msg.getPSize()));
@@ -134,18 +145,51 @@ void* Application::download(void *p){
                         printf("[thread] struct requested\n");
                         break;
                     case MSG_struct:
-                        printf("[thread] struct received\n");
-                        msg.pop_front(&strct);
-                        file = FileDir::createTree(strct);
-                        file->create(shared);
-                        printf("%s\n", strct);
-                        delete[] strct;
+                        if (!file){
+                            msg.pop_front(&strct);
+                            printf("%s\n", strct);
+                            file = FileDir::createTree(strct);
+                            file->create(shared);
+                            file->getFiles(files);
+                            delete[] strct;
+                            strct = 0;
+                        }
                         break;
+                    case MSG_filesize:
+                        msg.pop_front(&size);
+                        if (!size){
+                            printf("%s has size 0\n", files.back()->getPath().c_str());
+                            files.pop_back(); //fisierul e gol
+                        }
                     default:
                         printf("[thread] data received\n");
                         break;
                 }
             }
+        }
+        if (files.size()){
+            Message msg;
+
+            if (size){
+            }
+            else{
+                string name;
+                msg.push_back(MSG_getfilesize);
+                name = files.back()->getPath();
+                msg.push_back(name.size(), name.c_str());
+                printf("requesting size of %s\n", name.c_str());
+                if (robin<seeders.size()){
+                    write(seeders[robin], msg.getPSize(), sizeof(*msg.getPSize()));
+                    write(seeders[robin], msg.getMessage(), msg.getSize());
+                    robin++;
+                    robin %= seeders.size();
+                }
+                else{
+                    robin = 0;
+                }
+            }
+        }
+        else{
         }
     }
 
@@ -158,10 +202,14 @@ void* Application::download(void *p){
 
 void* Application::upload(void *p){
     Message *arg=(Message*)p, msg;
+    FILE *tin;
     int tcpsd, lastRequest=getTicks();
     FileDir *file;
     int size;
-    string strct;
+    string strct, path;
+    char *name;
+    struct stat stat_buf;
+
 
     pthread_detach(pthread_self());
     printf("Thread upload\n");
@@ -201,11 +249,27 @@ void* Application::upload(void *p){
                 default:
                     break;
                 case MSG_getstruct:
-                    printf("[thread] struct send\n");
+                    //printf("[thread] struct send\n");
                     file->getStructure(strct);
                     msg.clear();
                     msg.push_back(MSG_struct);
                     msg.push_back(strct.size(), strct.c_str());
+                    write(tcpsd, msg.getPSize(), sizeof(*msg.getPSize()));
+                    write(tcpsd, msg.getMessage(), msg.getSize());
+                    break;
+                case MSG_getfilesize:
+                    msg.pop_front(&name);
+                    path = file->getPath();
+                    while (path.back()!='/') path.pop_back();
+                    path += name;
+                    delete[] name;
+                    printf("sending size of %s\n", path.c_str());
+                    if (!stat(path.c_str(), &stat_buf)){
+                        size = stat_buf.st_size;
+                    }
+                    msg.clear();
+                    msg.push_back(MSG_filesize);
+                    msg.push_back(sizeof(size), &size);
                     write(tcpsd, msg.getPSize(), sizeof(*msg.getPSize()));
                     write(tcpsd, msg.getMessage(), msg.getSize());
                     break;

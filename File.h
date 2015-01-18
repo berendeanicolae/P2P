@@ -32,6 +32,7 @@ class FileDir{
 	    static FileDir* createTree(char *strct);
 	    virtual void create(string path);
 	    virtual string getPath();
+	    virtual void getFiles(vector<FileDir*> &files)=0;
 };
 
 class File: public FileDir{
@@ -44,6 +45,7 @@ class File: public FileDir{
     public:
         virtual FileDir* find(const char *exp);
 	    virtual void getStructure(string &strct);
+	    virtual void getFiles(vector<FileDir*> &files);
 };
 
 class Dir: public FileDir{
@@ -60,6 +62,7 @@ class Dir: public FileDir{
 	    virtual void getStructure(string &strct);
 	    virtual void create(string path);
 	    virtual string getPath();
+	    virtual void getFiles(vector<FileDir*> &files);
 };
 
 class Root: public Dir{
