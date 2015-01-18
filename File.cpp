@@ -21,7 +21,7 @@ void baseName(const char *path, char **dest){
     (*dest)[e-s+1] = 0;
 }
 
-FileDir::FileDir(): name(0), next(0) {}
+FileDir::FileDir(): name(0), parent(0), next(0) {}
 FileDir::~FileDir() {if (name) delete[] name;}
 FileDir* FileDir::find(regex& exp){
     if (!name)
@@ -30,6 +30,64 @@ FileDir* FileDir::find(regex& exp){
     if (regex_match(name, exp))
         return this;
     return 0;
+}
+FileDir* FileDir::createTree(char *strct){
+    char *lname, *rname;
+
+    if (!strct){
+        return 0;
+    }
+
+    for (lname=strct; *lname && !isalpha(*lname) && *lname!='}' && *lname!=':'; ++lname);
+    for (rname=lname; *rname && (isalnum(*rname) || *rname=='.' || *rname=='_'); ++rname);
+
+    if (*rname==':'){
+        Dir *file = new Dir();
+        file->setName(0);
+        if (lname!=rname){
+            int size = rname-lname;
+            char *name = new char[size+1];
+            memcpy(name, lname, size);
+            name[size] = 0;
+            file->setName(name);
+        }
+        for (rname+=2; *rname!=']'; ++rname){
+            FileDir *aux = createTree(rname);
+            for (int x=0; x!=1 || *rname!='}'; ++rname){
+                x -= *rname=='}';
+                x += *rname=='{';
+            }
+            aux->next = file->first;
+            file->first = aux;
+        }
+        return file;
+    }
+    else{
+        File *file = new File();
+        file->setName(0);
+        if (lname!=rname){
+            int size = rname-lname;
+            char *name = new char[size+1];
+            memcpy(name, lname, size);
+            name[size] = 0;
+            file->setName(name);
+        }
+        return file;
+    }
+}
+void FileDir::create(string path){
+    if (path.back()!='/')
+        path += '/';
+    path += name;
+    FILE *tout = fopen(path.c_str(), "w");
+    fclose(tout);
+}
+string FileDir::getPath(){
+    if (!name)
+        return "";
+    if (parent)
+        return parent->getPath()+name;
+    return name;
 }
 
 File::File(const char *name_){
@@ -87,11 +145,13 @@ Dir::Dir(const char *dirName): first(0){
                 if (S_ISDIR(st.st_mode)){
                     FileDir *child = new Dir(fullPath);
                     child->next = first;
+                    child->parent = this;
                     first = child;
                 }
                 else{
                     FileDir *child = new File(ent->d_name);
                     child->next = first;
+                    child->parent = this;
                     first = child;
                 }
             }
@@ -143,6 +203,22 @@ void Dir::getStructure(string &strct){
     }
     strct += "]}";
 }
+void Dir::create(string path){
+    if (path.back()!='/')
+        path += '/';
+    path += name;
+    mkdir(path.c_str(), 0755);
+    for (FileDir *p=first; p; p=p->next){
+        p->create(path);
+    }
+}
+string Dir::getPath(){
+    if (!name)
+        return "";
+    if (parent)
+        return parent->getPath()+'/'+name;
+    return name;
+}
 
 Root::Root(const char* dirName): Dir(dirName), path(0){
     if (name){
@@ -160,6 +236,7 @@ Root::Root(const char* dirName): Dir(dirName), path(0){
         else{
             path = new char[len+1];
             path[len] = 0;
+            strcpy(path, dirName);
         }
     }
 }
@@ -171,4 +248,9 @@ FileDir* Root::find(const char *exp){
             return retValue;
     }
     return 0;
+}
+string Root::getPath(){
+    if (path)
+        return path;
+    return "";
 }

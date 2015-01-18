@@ -1,9 +1,12 @@
 #include "Application.h"
 
-int main()
+int main(int argc, char *argv[])
 {
-    //TODO application should be singleton
-    Application app;
+    if (argc!=2){
+        printf("Usage: %s <shared dir>\n", argv[0]);
+        return 0;
+    }
+    Application app(argv[1]);
     app.run();
 	return 0;
 }

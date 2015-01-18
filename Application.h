@@ -17,7 +17,7 @@ using namespace std;
 class Application{
 
     public:
-        Application();
+        Application(const char *shared_);
         ~Application();
         void run();
 
@@ -31,7 +31,7 @@ class Application{
         int udpsd, nfds;
         State *state;
         vector<Message> requests;
-        const char *shared;
+        static string shared;
         FileDir *root;
         static void* download(void *);
         static void* upload(void *);

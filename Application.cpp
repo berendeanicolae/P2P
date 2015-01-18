@@ -8,6 +8,7 @@
 
 bool Application::connected = 0;
 bool Application::quit = 0;
+    string Application::shared("");
 
 string intToString(int value){
     string str;
@@ -22,16 +23,17 @@ string intToString(int value){
     return str;
 }
 
-Application::Application(): state(0), root(0){
-    struct passwd *pw;
+Application::Application(const char *shared_): state(0), root(0){
+    //struct passwd *pw;
     socklen_t size=sizeof(server);
-    if ( !(pw=getpwuid(getuid())) ){
+    /*if ( !(pw=getpwuid(getuid())) ){
         perror("Eroare la getpwuid(getuid())");
         return;
-    }
+    }*/
     //inirtializam directorul shared
-    shared = pw->pw_dir;
-    root = new Root(shared);
+    //shared = pw->pw_dir;
+    shared = shared_;
+    root = new Root(shared.c_str());
 
     nfds = 2;
     //create socket UDP
@@ -78,6 +80,7 @@ Application::~Application(){
 
 void* Application::download(void *p){
     Message *arg=(Message*)p;
+    FileDir *file=0;
     int tcpsd, lastResponse=getTicks(), nfds;
     vector<pair<int, int>> peers, seeders;
     char *strct;
@@ -133,6 +136,8 @@ void* Application::download(void *p){
                     case MSG_struct:
                         printf("[thread] struct received\n");
                         msg.pop_front(&strct);
+                        file = FileDir::createTree(strct);
+                        file->create(shared);
                         printf("%s\n", strct);
                         delete[] strct;
                         break;
@@ -144,6 +149,8 @@ void* Application::download(void *p){
         }
     }
 
+    if (file)
+        delete file;
     printf("Thread exited\n");
     pthread_exit(0);
     return 0;
@@ -266,7 +273,6 @@ void Application::process(){
                     comm = new Message;
                     comm->push_back(sizeof(sd), &sd);
                     comm->push_back(sizeof(&file), &file);
-                    printf(file->name);
                     pthread_create(&td, 0, upload, comm);
                 }
                 else{
