@@ -8,6 +8,7 @@ class Client : public State{
         Client(int udpsd, int nfds);
         int listening(vector<Message> &commands, int timeOut);
     private:
+        int lastPing;
         sockaddr_in server;
         void ping();
 };

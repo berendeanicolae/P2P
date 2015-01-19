@@ -2,9 +2,9 @@
 #include "network.h"
 #include <cstring>
 
-Client::Client(int udpsd, int nfds): State(udpsd, nfds) {}
+Client::Client(int udpsd, int nfds): State(udpsd, nfds), lastPing(getTicks()) {}
 
-void Client::ping() {printf("not implemented");}
+void Client::ping() {printf("[client] client cannot ping");}
 
 int Client::listening(vector<Message> &commands, int timeOut){
     fd_set readfds, writefds, errorfds;
@@ -44,8 +44,6 @@ int Client::listening(vector<Message> &commands, int timeOut){
     for (int d=3; d<=nfds; ++d){
         memset(msgBuffer, 0, sizeof(msgBuffer));
 
-        if (FD_ISSET(d, &errorfds)){// && d!=sd){
-        }
         if (FD_ISSET(d, &readfds)){// && d!=sd){
             MSG msgType;
             char ipString[40];
@@ -70,11 +68,17 @@ int Client::listening(vector<Message> &commands, int timeOut){
                     msg.clear();
                     msg.push_back(MSG_pong);
                     sendto(udpsd, msg.getMessage(), msg.getSize(), 0, (sockaddr*)&client, sizeof(client));
+                    lastPing = getTicks();
                     break;
             }
         }
-        if (FD_ISSET(d, &writefds)){// && d!=sd){
-        }
+    }
+    if (getTicks()-lastPing > 20){
+        Message msg;
+
+        msg.push_back(MSG_disconnected);
+        commands.push_back(msg);
+        printf("[client] serverul e offline\n");
     }
     return 0;
 }

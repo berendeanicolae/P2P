@@ -167,6 +167,7 @@ void* Application::download(void *p){
                         break;
                     case MSG_file:
                         msg.pop_front(&piece);
+                        printf("[thread] got piece %d\n", piece);
                         if (downloading.count(piece)){
                             string path;
                             int size;
@@ -175,8 +176,8 @@ void* Application::download(void *p){
                             path = shared;
                             if (path.back()!='/') path.push_back('/');
                             path += files.back()->getPath();
-                            tout = fopen(path.c_str(), "wb");
-                            fseek(tout, SEEK_SET, 1024*piece);
+                            tout = fopen(path.c_str(), "ab");
+                            fseek(tout, 1024*piece, SEEK_SET);
                             fwrite(cbuffer, 1, size, tout);
                             fclose(tout);
                             downloading.erase(piece);
@@ -190,8 +191,6 @@ void* Application::download(void *p){
             }
         }
         if (files.size()){
-            Message msg;
-
             if (filesize){
                 if (!downloading.size()){
                     int pieces = filesize/1024 + (filesize%1024!=0);
@@ -211,12 +210,14 @@ void* Application::download(void *p){
                             robin %= seeders.size();
                             downloading[i] = getTicks();
                         }
+                        printf("requested %d\n", i);
                     }
                 }
                 else{
                 }
             }
             else{
+                Message msg;
                 string name;
                 msg.push_back(MSG_getfilesize);
                 name = files.back()->getPath();
@@ -294,7 +295,7 @@ void* Application::upload(void *p){
                     break;
                 case MSG_getstruct:
                     lastRequest = getTicks();
-                    //printf("[thread] struct send\n");
+                    printf("[thread] struct send\n");
                     file->getStructure(strct);
                     msg.clear();
                     msg.push_back(MSG_struct);
@@ -323,6 +324,7 @@ void* Application::upload(void *p){
                     lastRequest = getTicks();
                     msg.pop_front(&piece);
                     msg.pop_front(&name);
+                    printf("[Thread] sending piece %d of %s\n", piece, name);
                     path = file->getPath();
                     while (path.back()!='/') path.pop_back();
                     path += name;
@@ -331,7 +333,7 @@ void* Application::upload(void *p){
                     msg.push_back(MSG_file);
                     msg.push_back(sizeof(piece), &piece);
                     tin = fopen(path.c_str(), "rb");
-                    fseek(tin, SEEK_SET, piece*1024);
+                    fseek(tin, piece*1024, SEEK_SET);
                     if ((size=fread(cbuffer, 1, 1024, tin))<=0){
                         continue;
                     }
@@ -375,6 +377,9 @@ void Application::process(){
                 break;
             case MSG_quit:
                 quit = 1;
+                break;
+            case MSG_disconnected:
+                connected = 0;
                 break;
             case MSG_request:
                 requests[i].pop_front(&sd);

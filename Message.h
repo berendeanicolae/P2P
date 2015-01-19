@@ -8,6 +8,7 @@ enum MSG{
     MSG_quit,
     MSG_ping,
     MSG_pong,
+    MSG_disconnected,
     MSG_search,
     MSG_request,
     MSG_have,
