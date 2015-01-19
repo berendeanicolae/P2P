@@ -81,13 +81,14 @@ Application::~Application(){
 void* Application::download(void *p){
     Message *arg=(Message*)p;
     FileDir *file=0;
+    FILE *tout;
     int tcpsd, lastResponse=getTicks(), nfds;
     vector<pair<int, int>> peers;
     vector<int> seeders;
     vector<FileDir*> files;
-    char *strct=0;
-    unsigned size=0, robin=0;
-    vector<pair<bool, int>> downloaded;
+    char *strct=0, cbuffer[1024];
+    unsigned filesize=0, robin=0, piece=0;
+    map<int, int> downloading;
 
     printf("Thread started\n");
     pthread_detach(pthread_self());
@@ -136,6 +137,8 @@ void* Application::download(void *p){
                 MSG msgType;
                 msg.pop_front(msgType);
                 switch (msgType){
+                    default:
+                        break;
                     case MSG_have:
                         seeders.push_back(d);
                         msg.clear();
@@ -156,13 +159,32 @@ void* Application::download(void *p){
                         }
                         break;
                     case MSG_filesize:
-                        msg.pop_front(&size);
-                        if (!size){
+                        msg.pop_front(&filesize);
+                        if (!filesize){
                             printf("%s has size 0\n", files.back()->getPath().c_str());
                             files.pop_back(); //fisierul e gol
                         }
-                    default:
-                        printf("[thread] data received\n");
+                        break;
+                    case MSG_file:
+                        msg.pop_front(&piece);
+                        if (downloading.count(piece)){
+                            string path;
+                            int size;
+
+                            size = msg.pop_front(cbuffer);
+                            path = shared;
+                            if (path.back()!='/') path.push_back('/');
+                            path += files.back()->getPath();
+                            tout = fopen(path.c_str(), "wb");
+                            fseek(tout, SEEK_SET, 1024*piece);
+                            fwrite(cbuffer, 1, size, tout);
+                            fclose(tout);
+                            downloading.erase(piece);
+                            if (!downloading.size()){
+                                size = 0;
+                                files.pop_back();
+                            }
+                        }
                         break;
                 }
             }
@@ -170,7 +192,29 @@ void* Application::download(void *p){
         if (files.size()){
             Message msg;
 
-            if (size){
+            if (filesize){
+                if (!downloading.size()){
+                    int pieces = filesize/1024 + (filesize%1024!=0);
+                    string name;
+                    name = files.back()->getPath();
+
+                    for (int i=0; i<pieces; ++i){
+                        Message msg;
+
+                        msg.push_back(MSG_getfile);
+                        msg.push_back(sizeof(i), &i);
+                        msg.push_back(name.size(), name.c_str());
+                        if (robin<seeders.size()){
+                            write(seeders[robin], msg.getPSize(), sizeof(*msg.getPSize()));
+                            write(seeders[robin], msg.getMessage(), msg.getSize());
+                            robin++;
+                            robin %= seeders.size();
+                            downloading[i] = getTicks();
+                        }
+                    }
+                }
+                else{
+                }
             }
             else{
                 string name;
@@ -205,9 +249,9 @@ void* Application::upload(void *p){
     FILE *tin;
     int tcpsd, lastRequest=getTicks();
     FileDir *file;
-    int size;
+    int size, piece;
     string strct, path;
-    char *name;
+    char *name, cbuffer[1024];
     struct stat stat_buf;
 
 
@@ -249,6 +293,7 @@ void* Application::upload(void *p){
                 default:
                     break;
                 case MSG_getstruct:
+                    lastRequest = getTicks();
                     //printf("[thread] struct send\n");
                     file->getStructure(strct);
                     msg.clear();
@@ -258,6 +303,7 @@ void* Application::upload(void *p){
                     write(tcpsd, msg.getMessage(), msg.getSize());
                     break;
                 case MSG_getfilesize:
+                    lastRequest = getTicks();
                     msg.pop_front(&name);
                     path = file->getPath();
                     while (path.back()!='/') path.pop_back();
@@ -270,6 +316,26 @@ void* Application::upload(void *p){
                     msg.clear();
                     msg.push_back(MSG_filesize);
                     msg.push_back(sizeof(size), &size);
+                    write(tcpsd, msg.getPSize(), sizeof(*msg.getPSize()));
+                    write(tcpsd, msg.getMessage(), msg.getSize());
+                    break;
+                case MSG_getfile:
+                    lastRequest = getTicks();
+                    msg.pop_front(&piece);
+                    msg.pop_front(&name);
+                    path = file->getPath();
+                    while (path.back()!='/') path.pop_back();
+                    path += name;
+                    delete[] name;
+                    msg.clear();
+                    msg.push_back(MSG_file);
+                    msg.push_back(sizeof(piece), &piece);
+                    tin = fopen(path.c_str(), "rb");
+                    fseek(tin, SEEK_SET, piece*1024);
+                    if ((size=fread(cbuffer, 1, 1024, tin))<=0){
+                        continue;
+                    }
+                    msg.push_back(size, cbuffer);
                     write(tcpsd, msg.getPSize(), sizeof(*msg.getPSize()));
                     write(tcpsd, msg.getMessage(), msg.getSize());
                     break;

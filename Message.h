@@ -12,7 +12,8 @@ enum MSG{
     MSG_request,
     MSG_have,
     MSG_struct,
-    MSG_getstruct, //get directory tree of file
+    MSG_getstruct,
+    MSG_file,
     MSG_getfile,
     MSG_filesize,
     MSG_getfilesize,
