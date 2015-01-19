@@ -155,6 +155,10 @@ int Server::listening(vector<Message> &commands, int timeOut){
                         }
                         break;
                     case MSG_search:
+                        commands.push_back(msg);
+                        for (list<Peer>::iterator it=peers.begin(); it!=peers.end(); ++it){
+                            sendto(udpsd, msg.getMessage(), msg.getSize(), 0, (sockaddr*)&it->address, sizeof(it->address));
+                        }
                         break;
                     default:
                         printf("[server] Wrong option\n");

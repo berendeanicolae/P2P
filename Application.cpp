@@ -64,7 +64,7 @@ Application::Application(const char *shared_): state(0), root(0){
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr(IP);
     server.sin_port = htons(PORT);
-    state = new Client(udpsd, nfds);
+    state = new Client(udpsd, nfds, &server);
     process();
 }
 

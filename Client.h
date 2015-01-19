@@ -5,11 +5,11 @@
 
 class Client : public State{
     public:
-        Client(int udpsd, int nfds);
+        Client(int udpsd, int nfds, sockaddr_in* server);
         int listening(vector<Message> &commands, int timeOut);
     private:
         int lastPing;
-        sockaddr_in server;
+        sockaddr_in serverAddr;
         void ping();
 };
 

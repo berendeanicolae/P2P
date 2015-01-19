@@ -2,7 +2,9 @@
 #include "network.h"
 #include <cstring>
 
-Client::Client(int udpsd, int nfds): State(udpsd, nfds), lastPing(getTicks()) {}
+Client::Client(int udpsd, int nfds, sockaddr_in *server): State(udpsd, nfds), lastPing(getTicks()){
+    memcpy(&serverAddr, server, sizeof(*server));
+}
 
 void Client::ping() {printf("[client] client cannot ping");}
 
@@ -27,7 +29,7 @@ int Client::listening(vector<Message> &commands, int timeOut){
     */
     //verificam separat stdin, stdout, stderr
     if (FD_ISSET(0, &readfds)){
-        Message msg;
+        Message msg, comm;
         memset(msgBuffer, 0, sizeof(msgBuffer));
         if (read(0, msgBuffer, sizeof(msgBuffer))<=0){
             perror("[server] Eroare la citirea de la tastatura");
@@ -37,6 +39,38 @@ int Client::listening(vector<Message> &commands, int timeOut){
         if (input == "quit" || input == "exit"){
             msg.push_back(MSG_quit);
             commands.push_back(msg);
+        }
+        else if (!input.compare(0, strlen("search"), "search")){
+            const char *uuid = getUUID();
+            int sd = socket(AF_INET, SOCK_STREAM, 0); //socketul folosit pentru a comunica cu peers ce au fisierul
+            sockaddr_in server={};
+            server.sin_family = AF_INET;
+            server.sin_addr.s_addr = htonl(INADDR_ANY);
+            server.sin_port = htons(0);
+            bind(sd, (sockaddr*)&server, sizeof(server));
+            listen(sd, 5);
+            //sockaddr_in tcpserver = {};
+            //socklen_t sz = sizeof(tcpserver);
+
+            //calculam expresia regulata
+            input.erase(input.begin(), input.begin()+strlen("search"));
+            stringStrip(input);
+            printf("[Search] %s %s\n", input.c_str(), uuid);
+            uuids[uuid] = getTicks();
+            comm.push_back(MSG_request);
+            comm.push_back(sizeof(sd), &sd);
+            commands.push_back(comm);
+            //trimit la server mesajul
+            int ip=getIP(sd);
+            unsigned short port=getPort(sd);
+
+            msg.clear();
+            msg.push_back(MSG_search);
+            msg.push_back(40, uuid);
+            msg.push_back(sizeof(ip), &ip);
+            msg.push_back(sizeof(port), &port);
+            msg.push_back(input.size(), input.c_str());
+            sendto(udpsd, msg.getMessage(), msg.getSize(), 0, (sockaddr*)&serverAddr, sizeof(serverAddr));
         }
         else{
         }
