@@ -346,6 +346,8 @@ void* Application::upload(void *p){
                     msg.push_back(MSG_file);
                     msg.push_back(sizeof(piece), &piece);
                     tin = fopen(path.c_str(), "rb");
+                    if (!tin)
+                        continue;
                     fseek(tin, piece*1024, SEEK_SET);
                     if ((size=fread(cbuffer, 1, 1024, tin))<=0){
                         continue;
