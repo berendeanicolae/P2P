@@ -8,6 +8,10 @@ Client::Client(int udpsd, int nfds, sockaddr_in *server): State(udpsd, nfds), la
 
 void Client::ping() {printf("[client] client cannot ping");}
 
+/**
+    @param[out] commands Vector to save the commands that must be executed by Application
+    @param[in] timeOut The sleep time in select (100 by default)
+*/
 int Client::listening(vector<Message> &commands, int timeOut){
     fd_set readfds, writefds, errorfds;
     timeval timeout;

@@ -8,8 +8,12 @@
 
 bool Application::connected = 0;
 bool Application::quit = 0;
-    string Application::shared("");
+string Application::shared;
 
+/**
+    @param[in] value The value to be converted
+    \return String representation of value
+*/
 string intToString(int value){
     string str;
 
@@ -23,6 +27,9 @@ string intToString(int value){
     return str;
 }
 
+/**
+    @param[in] shared Path to the shared directory
+*/
 Application::Application(const char *shared_): state(0), root(0){
     //struct passwd *pw;
     socklen_t size=sizeof(server);
@@ -78,6 +85,9 @@ Application::~Application(){
     close(udpsd);
 }
 
+/**
+    @param[in] p Pointer to a Message object
+*/
 void* Application::download(void *p){
     Message *arg=(Message*)p;
     FileDir *file=0;
@@ -245,6 +255,9 @@ void* Application::download(void *p){
     return 0;
 }
 
+/**
+    @param[in] p Pointer to a Message object
+*/
 void* Application::upload(void *p){
     Message *arg=(Message*)p, msg;
     FILE *tin;
@@ -350,6 +363,8 @@ void* Application::upload(void *p){
     return 0;
 }
 
+/**
+*/
 void Application::process(){
     socklen_t sock_size = sizeof(server);
 

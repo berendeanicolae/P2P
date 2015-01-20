@@ -36,6 +36,10 @@ void Server::ping(){
     }
 }
 
+/**
+    @param[out] commands Vector to save the commands that must be executed by Application
+    @param[in] timeOut The sleep time in select (100 by default)
+*/
 int Server::listening(vector<Message> &commands, int timeOut){
     fd_set readfds, writefds, errorfds; //multimile de descriptori de citire, scriere si eroare
     timeval timeout;
